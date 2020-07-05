@@ -6,6 +6,7 @@ import sys
 import requests
 import time
 import timeit
+import json
 
 #from configparser import ConfigParser
 from pymysql import connect
@@ -53,11 +54,17 @@ def scrape_tile(tile, scraper, progress, task):
     progress.update(task, advance=1)
     while tries < 3:
         try:
-            tiles_data.append(scraper.get_entities([iitc_tile_name]))
+            t_data = scraper.get_entities([iitc_tile_name])
+            """for tiled in t_data.get("result", {})["map"].values():
+                if not "error" in tiled["gameEntities"]:
+                    for entry in tiled["gameEntities"]:
+                        if entry[2][0] == "p":"""
+            tiles_data.append(t_data["result"]["map"])
             tries = 3
         except Exception as e:
             tries += 1
             print(f"Error with tile {iitc_tile_name} - Retry {tries}/3")
+            print(e)
 
 def scrape_all():
     bbox = list(config.bbox.split(';'))
@@ -70,47 +77,39 @@ def scrape_all():
     total_tiles = len(tiles)
     print(f"Total tiles to scrape: {total_tiles}")
 
-    timed_out_items = []
     portals = []
-    portal_ids = []
     with Progress() as progress:
         task = progress.add_task("Scraping Portals", total=total_tiles)
         with ThreadPoolExecutor(max_workers=config.workers) as executor: 
             for tile in tiles:
                 executor.submit(scrape_tile, tile, scraper, progress, task)
-
-    for tile_data in tiles_data:
-        try:
-            if "result" in tile_data:
-                for data in tile_data["result"]["map"]:
-                    if "error" in tile_data["result"]["map"][data]:
-                        timed_out_items.append(data)
-                    else:
-                        for entry in tile_data["result"]["map"][data]["gameEntities"]:
-                            #print(entry)
-                            if entry[2][0] == "p":
-                                portal_ids.append(entry[0])
-                                portals.append(entry[2])
-                                #print(entry[0])
-        except Exception as e:
-            print("Something went wrong when parsing Portals")
-            print(e)
-    
+    #print(tiles_data)
+    try:
+        for tile_data in tiles_data:
+            for value in tile_data.values():
+                for entry in value["gameEntities"]:
+                    if entry[2][0] == "p":
+                        p_id = entry[0]
+                        p_lat = entry[2][2]/1e6
+                        p_lon = entry[2][3]/1e6
+                        p_name = entry[2][8]
+                        p_img = entry[2][7]
+                        portals.append([p_id, p_lat, p_lon, p_name, p_img])
+    except Exception as e:
+        print("Something went wrong while parsing Portals")
+        print(e)
+    print(f"Total amount of Portals: {len(portals)}")
     queries = connect_db(config)
     updated_portals = 0
     with Progress() as progress:
-        task = progress.add_task("Updating DB", total=len(portal_ids))
-        for idx, val in enumerate(portal_ids):
-            lat = (portals[idx][2])/1e6
-            lon = (portals[idx][3])/1e6
-            p_name = portals[idx][portal_name]
-            p_url = portals[idx][portal_url]
+        task = progress.add_task("Updating DB", total=len(portals))
+        for p_id, lat, lon, p_name, p_img in portals:
             updated_ts = int(time.time())
             try:
-                queries.update_portal(val, p_name, p_url, lat, lon, updated_ts)
+                queries.update_portal(p_id, p_name, p_img, lat, lon, updated_ts)
                 updated_portals += 1
             except Exception as e:
-                print(f"Failed putting Portal {p_name} ({val}) in your DB")
+                print(f"Failed putting Portal {p_name} ({p_id}) in your DB")
                 print(e)
             progress.update(task, advance=1)
 
