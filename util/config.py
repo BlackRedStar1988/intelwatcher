@@ -30,6 +30,7 @@ class SeleniumConfig:
         config_file = ConfigParser()
         config_file.read(config_path)
 
+        self.webdriver = config_file.get("Selenium", "driver", fallback="chrome").lower()
         self.ingress_login_type = config_file.get("Ingress", "login_type", fallback="google").lower()
         self.ingress_user = config_file.get("Ingress", "user")
         self.ingress_password = config_file.get("Ingress", "password")
