@@ -13,7 +13,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
 
 from util.ingress import IntelMap, MapTiles
-from util.config import create_config
+from util.config import IntelWatcherConfig
 from util.queries import create_queries
 
 tiles_data = []
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config_path = args.config
 
-    config = create_config(config_path)
+    config = IntelWatcherConfig(config_path)
     
 
     scraper = IntelMap(config.cookie)

@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 
-class create_config:
+
+class IntelWatcherConfig:
     def __init__(self, config_path):
         config_file = ConfigParser()
         config_file.read(config_path)
@@ -22,3 +23,13 @@ class create_config:
 
         with open("cookie.txt", encoding="utf-8") as cookie:
             self.cookie = cookie.read()
+
+
+class SeleniumConfig:
+    def __init__(self, config_path):
+        config_file = ConfigParser()
+        config_file.read(config_path)
+
+        self.ingress_login_type = config_file.get("Ingress", "login_type", fallback="google").lower()
+        self.ingress_user = config_file.get("Ingress", "user")
+        self.ingress_password = config_file.get("Ingress", "password")
