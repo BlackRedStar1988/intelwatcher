@@ -32,21 +32,16 @@ def get_ingress_cookie(config):
         options = webdriver.ChromeOptions()
         options.add_argument(f'user-agent={user_agent}')
 
-    options.add_argument("--headless")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
+    options.add_argument('--headless')
 
-    if config.webdriver == 'chromium':
-        from webdriver_manager.chrome import ChromeDriverManager
-        from webdriver_manager.utils import ChromeType
-
-        driver = webdriver.Chrome(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install(), options=options)
-    elif config.webdriver == 'firefox':
+    if config.webdriver == 'firefox':
         from webdriver_manager.firefox import GeckoDriverManager
 
+        options.add_argument('--new-instance')
+        options.add_argument('--safe-mode')
+
         driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=options)
-    #elif config.webdriver == 'phantomjs':
+    # elif config.webdriver == 'phantomjs':
     #    dcap = dict(webdriver.DesiredCapabilities.PHANTOMJS)
     #    dcap['phantomjs.page.settings.userAgent'] = (
     #        random.choice(user_agents)
@@ -54,9 +49,19 @@ def get_ingress_cookie(config):
     #    driver = webdriver.PhantomJS(desired_capabilities=dcap)
     #    driver.set_window_size(1400, 1000)
     else:
-        from webdriver_manager.chrome import ChromeDriverManager
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--no-sandbox')
 
-        driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        if config.webdriver == 'chromium':
+            from webdriver_manager.chrome import ChromeDriverManager
+            from webdriver_manager.utils import ChromeType
+
+            driver = webdriver.Chrome(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install(), options=options)
+        else:
+            from webdriver_manager.chrome import ChromeDriverManager
+
+            driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 
     if config.ingress_login_type == 'google':
         print('Login to Google via Stackoverflow')
@@ -71,7 +76,17 @@ def get_ingress_cookie(config):
         driver.implicitly_wait(10)
 
         print('Enter password...')
-        driver.find_element(By.ID, 'password').find_element(By.NAME, 'password').send_keys(config.ingress_password)
+        pw_element = driver.find_element(By.ID, 'password').find_element(By.NAME, 'password')
+
+        if config.webdriver == 'firefox':
+            # to make element visible:
+            driver.execute_script(
+                'arguments[0].style = ""; arguments[0].style.display = "block"; arguments[0].style.visibility = "visible";',
+                pw_element
+            )
+            time.sleep(1)
+
+        pw_element.send_keys(config.ingress_password)
         driver.find_element(By.ID, 'passwordNext').click()
         driver.implicitly_wait(10)
 
