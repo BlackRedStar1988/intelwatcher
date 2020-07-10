@@ -6,7 +6,7 @@ webhook_url = webhook_url
 workers = 3
 
 [Ingress]
-login_type = google
+login_type = google/facebook
 user =
 password =
 

@@ -10,6 +10,12 @@ from selenium.webdriver.common.by import By
 from util.config import SeleniumConfig
 
 
+def _debug_save_screenshot(debug, driver, filename):
+    if debug:
+        driver.save_screenshot(filename)
+    driver.quit()
+    sys.exit(1)
+
 def get_ingress_cookie(config):
     if config.debug:
         debug_dir = Path(__file__).resolve().parent / 'debug'
@@ -49,13 +55,6 @@ def get_ingress_cookie(config):
         options.add_argument('--safe-mode')
 
         driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=options)
-    # elif config.webdriver == 'phantomjs':
-    #    dcap = dict(webdriver.DesiredCapabilities.PHANTOMJS)
-    #    dcap['phantomjs.page.settings.userAgent'] = (
-    #        random.choice(user_agents)
-    #    )
-    #    driver = webdriver.PhantomJS(desired_capabilities=dcap)
-    #    driver.set_window_size(1400, 1000)
     else:
         options.add_argument('--disable-extensions')
         options.add_argument('--disable-dev-shm-usage')
@@ -79,10 +78,7 @@ def get_ingress_cookie(config):
             driver.find_element(By.CSS_SELECTOR, f'.s-btn__{config.ingress_login_type}').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            if config.debug:
-                driver.save_screenshot(str(debug_dir) + '/google_login_init.png')
-            driver.quit()
-            sys.exit(1)
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/google_login_init.png')
 
         print('Enter username...')
         try:
@@ -90,10 +86,7 @@ def get_ingress_cookie(config):
             driver.find_element(By.ID, 'identifierNext').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            if config.debug:
-                driver.save_screenshot(str(debug_dir) + '/google_login_username.png')
-            driver.quit()
-            sys.exit(1)
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/google_login_username.png')
 
         print('Enter password...')
         try:
@@ -111,10 +104,7 @@ def get_ingress_cookie(config):
             driver.find_element(By.ID, 'passwordNext').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            if config.debug:
-                driver.save_screenshot(str(debug_dir) + '/google_login_password.png')
-            driver.quit()
-            sys.exit(1)
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/google_login_password.png')
 
         print('Waiting for login...')
         time.sleep(5)
@@ -125,22 +115,57 @@ def get_ingress_cookie(config):
             driver.find_element(By.ID, 'profileIdentifier').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            if config.debug:
-                driver.save_screenshot(str(debug_dir) + '/intel_login_init.png')
-            driver.quit()
-            sys.exit(1)
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/intel_login_init.png')
 
         print('Waiting for login...')
         time.sleep(5)
+        _write_cookie(driver)
+    elif config.ingress_login_type == 'facebook':
+        driver.get('http://intel.ingress.com')
+        driver.find_element(By.XPATH, '//div[@id="dashboard_container"]//a[@class="button_link" and contains(text(), "Facebook")]').click()
+        driver.implicitly_wait(10)
 
-        print('Getting cookies...')
-        cookies = {c['name']: c['value'] for c in driver.get_cookies()}
+        print('Enter username...')
+        try:
+            driver.find_element(By.ID, 'email').send_keys(config.ingress_user)
+        except NoSuchElementException:
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_username.png')
 
-        with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
-            print('Write cookie data into "cookie.txt"...')
-            cookie.write(''.join("{}={}; ".format(k, v) for k, v in cookies.items()))
+        print('Enter password...')
+        try:
+            driver.find_element(By.ID, 'pass').send_keys(config.ingress_password)
+        except NoSuchElementException:
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_password.png')
+
+        print('Waiting for login...')
+        try:
+            driver.find_element(By.ID, 'loginbutton').click()
+            driver.implicitly_wait(10)
+        except NoSuchElementException:
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_login.png')
+
+        time.sleep(5)
+
+        print('Confirm oauth login...')
+        try:
+            driver.find_element(By.ID, 'platformDialogForm').submit()
+            driver.implicitly_wait(10)
+        except NoSuchElementException:
+            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_oauth_confirm.png')
+
+        time.sleep(5)
+        _write_cookie(driver)
 
     driver.quit()
+
+
+def _write_cookie(driver):
+    print('Getting cookies...')
+    cookies = {c['name']: c['value'] for c in driver.get_cookies()}
+
+    with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
+        print('Write cookie data into "cookie.txt"...')
+        cookie.write(''.join("{}={}; ".format(k, v) for k, v in cookies.items()))
 
 
 if __name__ == '__main__':
