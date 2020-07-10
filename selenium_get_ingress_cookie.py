@@ -1,13 +1,20 @@
+import sys
 import time
 import argparse
 import random
 
+from pathlib import Path
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from util.config import SeleniumConfig
 
 
 def get_ingress_cookie(config):
+    if config.debug:
+        debug_dir = Path(__file__).resolve().parent / 'debug'
+        debug_dir.mkdir(exist_ok=True)
+
     user_agents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3072.0 Safari/537.36',
         'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0',
@@ -32,7 +39,8 @@ def get_ingress_cookie(config):
         options = webdriver.ChromeOptions()
         options.add_argument(f'user-agent={user_agent}')
 
-    options.add_argument('--headless')
+    if config.headless_mode:
+        options.add_argument('--headless')
 
     if config.webdriver == 'firefox':
         from webdriver_manager.firefox import GeckoDriverManager
@@ -67,36 +75,60 @@ def get_ingress_cookie(config):
         print('Login to Google via Stackoverflow')
         driver.get('https://stackoverflow.com/users/login?ssrc=head')
 
-        driver.find_element(By.CSS_SELECTOR, f'.s-btn__{config.ingress_login_type}').click()
-        driver.implicitly_wait(10)
+        try:
+            driver.find_element(By.CSS_SELECTOR, f'.s-btn__{config.ingress_login_type}').click()
+            driver.implicitly_wait(10)
+        except NoSuchElementException:
+            if config.debug:
+                driver.save_screenshot(str(debug_dir) + '/google_login_init.png')
+            driver.quit()
+            sys.exit(1)
 
         print('Enter username...')
-        driver.find_element(By.ID, 'identifierId').send_keys(config.ingress_user)
-        driver.find_element(By.ID, 'identifierNext').click()
-        driver.implicitly_wait(10)
+        try:
+            driver.find_element(By.ID, 'identifierId').send_keys(config.ingress_user)
+            driver.find_element(By.ID, 'identifierNext').click()
+            driver.implicitly_wait(10)
+        except NoSuchElementException:
+            if config.debug:
+                driver.save_screenshot(str(debug_dir) + '/google_login_username.png')
+            driver.quit()
+            sys.exit(1)
 
         print('Enter password...')
-        pw_element = driver.find_element(By.ID, 'password').find_element(By.NAME, 'password')
+        try:
+            pw_element = driver.find_element(By.ID, 'password').find_element(By.NAME, 'password')
 
-        if config.webdriver == 'firefox':
-            # to make element visible:
-            driver.execute_script(
-                'arguments[0].style = ""; arguments[0].style.display = "block"; arguments[0].style.visibility = "visible";',
-                pw_element
-            )
-            time.sleep(1)
+            if config.webdriver == 'firefox':
+                # to make element visible:
+                driver.execute_script(
+                    'arguments[0].style = ""; arguments[0].style.display = "block"; arguments[0].style.visibility = "visible";',
+                    pw_element
+                )
+                time.sleep(1)
 
-        pw_element.send_keys(config.ingress_password)
-        driver.find_element(By.ID, 'passwordNext').click()
-        driver.implicitly_wait(10)
+            pw_element.send_keys(config.ingress_password)
+            driver.find_element(By.ID, 'passwordNext').click()
+            driver.implicitly_wait(10)
+        except NoSuchElementException:
+            if config.debug:
+                driver.save_screenshot(str(debug_dir) + '/google_login_password.png')
+            driver.quit()
+            sys.exit(1)
 
         print('Waiting for login...')
         time.sleep(5)
 
         print('Login to Intel Ingress')
-        driver.get('https://accounts.google.com/o/oauth2/v2/auth?client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&redirect_uri=https://intel.ingress.com/&prompt=consent%20select_account&state=GOOGLE&scope=email%20profile&response_type=code')
-        driver.find_element(By.ID, 'profileIdentifier').click()
-        driver.implicitly_wait(10)
+        try:
+            driver.get('https://accounts.google.com/o/oauth2/v2/auth?client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&redirect_uri=https://intel.ingress.com/&prompt=consent%20select_account&state=GOOGLE&scope=email%20profile&response_type=code')
+            driver.find_element(By.ID, 'profileIdentifier').click()
+            driver.implicitly_wait(10)
+        except NoSuchElementException:
+            if config.debug:
+                driver.save_screenshot(str(debug_dir) + '/intel_login_init.png')
+            driver.quit()
+            sys.exit(1)
 
         print('Waiting for login...')
         time.sleep(5)

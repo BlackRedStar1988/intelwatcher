@@ -11,7 +11,9 @@ user =
 password =
 
 [Selenium]
+debug = False
 driver = chrome/chromium/firefox
+headless_mode = True
 
 [DB]
 scanner = mad/rdm
