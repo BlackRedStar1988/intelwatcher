@@ -146,14 +146,14 @@ def get_ingress_cookie(config):
 
         time.sleep(5)
 
-        print('Confirm oauth login...')
+        print('Confirm oauth login when needed...')
         try:
             driver.find_element(By.ID, 'platformDialogForm').submit()
             driver.implicitly_wait(10)
+            time.sleep(5)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_oauth_confirm.png')
+            pass
 
-        time.sleep(5)
         _write_cookie(driver)
 
     driver.quit()
