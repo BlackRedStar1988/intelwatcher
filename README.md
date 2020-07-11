@@ -16,12 +16,13 @@ Intel Watcher needs to be able to log into the Intel Map in order to get Portal 
 #### Notes
 - Use a burner Account to log into Intel (!!) **Scraper Accounts have been banned before**
 - A Cookie runs out after 14 days. Explained below are a few ways you can get a new one.
+- When using Facebook to automatically log in, you might have to wait an hour after creating the FB account.
 
 ### How to get Cookies
 #### Automatic
 Intel Watcher has the ability to log into the Intel Map and renew the cookie on its own. It does that by simulating a browser, which can be done in different ways. In case logging in fails, you'll receive a Webhook (if enabled) and it tries again after an hour.
 
-**Mechanize**: Mechanize allows easy and light-weight web-browsing in Python but comes with a few disadvantages. **It only allows logging into Intel using Facebook**. So open your Ingress App, log into your burner Ingress Account and link it to a burner Facebook Account.
+**Mechanize**: Mechanize allows easy and light-weight web-browsing in Python but comes with a few disadvantages. **It only allows logging into Intel using Facebook**. So open your Ingress App, log into your burner Ingress Account and link it to a burner Facebook Account. Now log into Intel using Facebook once.
 
 In the config you then have to set `module` to `mechanize`, put in your login data and set `enable` to `True`. Ignore the Selenium section.
 

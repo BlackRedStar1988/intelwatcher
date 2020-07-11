@@ -94,7 +94,6 @@ class IntelMap:
             self.headers.update({'x-csrftoken': self.cookie_dict['csrftoken']})
             self.isCookieOk = True
         except IndexError:
-            print("Oops!, looks like you have a problem with your cookie.")
             self.isCookieOk = False
 
 

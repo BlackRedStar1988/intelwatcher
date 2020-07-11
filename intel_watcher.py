@@ -8,6 +8,7 @@ import json
 from pymysql import connect
 from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
+from rich import print
 
 from util.ingress import IntelMap, MapTiles
 from util.config import Config
@@ -60,41 +61,45 @@ def scrape_tile(tile, scraper, progress, task):
             tries = 3
         except Exception as e:
             tries += 1
-            print(f"Error with tile {iitc_tile_name} - Retry {tries}/3")
-            print(e)
+            print(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
 
 def scrape_all():
     bbox = list(config.bbox.split(';'))
-    tiles = []
+    tiles_list = []
     for cord in bbox:
         bbox_cord = list(map(float, cord.split(',')))
         bbox_cord.append(15)
         mTiles = MapTiles(bbox_cord)
-        tiles = tiles + mTiles.getTiles()
-    total_tiles = len(tiles)
-    print(f"Total tiles to scrape: {total_tiles}")
+        tiles_list.append(mTiles.getTiles())
+    
+    for index, tiles in enumerate(tiles_list):
+        print("")
+        print(f"[yellow]Scraping area #{index + 1}")
+        total_tiles = len(tiles)
+        print(f"Total tiles to scrape: {total_tiles}")
 
-    portals = []
-    with Progress() as progress:
-        task = progress.add_task("Scraping Portals", total=total_tiles)
-        with ThreadPoolExecutor(max_workers=config.workers) as executor: 
-            for tile in tiles:
-                executor.submit(scrape_tile, tile, scraper, progress, task)
-    #print(tiles_data)
-    try:
-        for tile_data in tiles_data:
-            for value in tile_data.values():
-                for entry in value["gameEntities"]:
-                    if entry[2][0] == "p":
-                        p_id = entry[0]
-                        p_lat = entry[2][2]/1e6
-                        p_lon = entry[2][3]/1e6
-                        p_name = entry[2][8]
-                        p_img = entry[2][7]
-                        portals.append([p_id, p_lat, p_lon, p_name, p_img])
-    except Exception as e:
-        print("Something went wrong while parsing Portals")
-        print(e)
+        portals = []
+        with Progress() as progress:
+            task = progress.add_task("Scraping Portals", total=total_tiles)
+            with ThreadPoolExecutor(max_workers=config.workers) as executor: 
+                for tile in tiles:
+                    executor.submit(scrape_tile, tile, scraper, progress, task)
+        #print(tiles_data)
+        try:
+            for tile_data in tiles_data:
+                for value in tile_data.values():
+                    for entry in value["gameEntities"]:
+                        if entry[2][0] == "p":
+                            p_id = entry[0]
+                            p_lat = entry[2][2]/1e6
+                            p_lon = entry[2][3]/1e6
+                            p_name = entry[2][8]
+                            p_img = entry[2][7]
+                            portals.append([p_id, p_lat, p_lon, p_name, p_img])
+        except Exception as e:
+            print("Something went wrong while parsing Portals")
+            print(e)
+    print("")
     print(f"Total amount of Portals: {len(portals)}")
     queries = connect_db(config)
     updated_portals = 0
@@ -143,6 +148,7 @@ if __name__ == "__main__":
     scraper = IntelMap(config.cookie)
 
     if not scraper.getCookieStatus():
+        print("[red]Oops! Looks like you have a problem with your cookie.")
         cookie_get_success = False
         if config.enable_cookie_getting:
             print("Trying to get a new one")
@@ -165,9 +171,9 @@ if __name__ == "__main__":
             send_cookie_webhook("Your Intel Cookie probably ran out! Please get a new one or check your account.")
             sys.exit(1)
     else:
-        print("Cookie works!")
+        print("[green]Cookie works!")
 
-    print("Got everything. Starting to scrape now.")
+    print("[green]Got everything. Starting to scrape now.")
 
     if args.update:
         queries = connect_db(config)
@@ -183,4 +189,4 @@ if __name__ == "__main__":
     start = timeit.default_timer()
     scrape_all()
     stop = timeit.default_timer()
-    print(f"Total runtime: {round(stop - start, 1)} seconds")
+    print(f"[yellow]Total runtime: {round(stop - start, 1)} seconds")
