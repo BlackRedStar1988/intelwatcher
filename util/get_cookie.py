@@ -3,20 +3,69 @@ import time
 import argparse
 import random
 
-from pathlib import Path
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.by import By
-from util.config import SeleniumConfig
+def mechanize_cookie(config):
+    import mechanize
 
+    print("Logging into Facebook using mechanize")
+    def select_form():
+        browser.select_form(nr=0)
+        browser.form['email'] = config.ingress_user
+        browser.form['pass'] = config.ingress_password
+        response = browser.submit()
+        return response
 
-def _debug_save_screenshot(debug, driver, filename):
-    if debug:
-        driver.save_screenshot(filename)
-    driver.quit()
-    sys.exit(1)
+    browser = mechanize.Browser()
+    browser.set_handle_robots(False)
+    cookies = mechanize.CookieJar()
+    browser.set_cookiejar(cookies)
+    browser.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.7 (KHTML, like Gecko) Chrome/7.0.517.41 Safari/534.7')]
+    browser.set_handle_refresh(False)
 
-def get_ingress_cookie(config):
+    url = 'https://www.facebook.com/v3.2/dialog/oauth?client_id=449856365443419&redirect_uri=https%3A%2F%2Fintel.ingress.com%2F'
+    browser.open(url)
+
+    # sometimes you have to fill in the form multiple times for whatever reason
+    tries = 0
+    while not "https://intel.ingress.com/" in browser.geturl() and tries < 5:
+        response = select_form()
+        tries += 1
+        time.sleep(2)
+
+    # this is magic
+    req = mechanize.Request(browser.geturl())
+    cookie_list = browser._ua_handlers['_cookies'].cookiejar.make_cookies(response, req)
+
+    cookies = {c.name: c.value for c in cookie_list}
+    final_cookie = ''.join("{}={}; ".format(k, v) for k, v in cookies.items())
+
+    print("Your cookie:")
+    print(final_cookie)
+
+    with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
+        cookie.write(final_cookie)
+
+    return final_cookie
+
+def selenium_cookie(config):
+    from pathlib import Path
+    from selenium import webdriver
+    from selenium.common.exceptions import NoSuchElementException
+    from selenium.webdriver.common.by import By
+
+    def _debug_save_screenshot(debug, driver, filename):
+        if debug:
+            driver.save_screenshot(filename)
+        driver.quit()
+        sys.exit(1)
+
+    def _write_cookie(driver):
+        print('Getting cookies...')
+        cookies = {c['name']: c['value'] for c in driver.get_cookies()}
+
+        with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
+            print('Write cookie data into "cookie.txt"...')
+            cookie.write(''.join("{}={}; ".format(k, v) for k, v in cookies.items()))
+
     if config.debug:
         debug_dir = Path(__file__).resolve().parent / 'debug'
         debug_dir.mkdir(exist_ok=True)
@@ -157,16 +206,6 @@ def get_ingress_cookie(config):
         _write_cookie(driver)
 
     driver.quit()
-
-
-def _write_cookie(driver):
-    print('Getting cookies...')
-    cookies = {c['name']: c['value'] for c in driver.get_cookies()}
-
-    with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
-        print('Write cookie data into "cookie.txt"...')
-        cookie.write(''.join("{}={}; ".format(k, v) for k, v in cookies.items()))
-
 
 if __name__ == '__main__':
     print('Initializing...')

@@ -3,3 +3,7 @@ lxml
 beautifulsoup4
 pymysql
 rich
+
+selenium
+webdriver_manager
+mechanize

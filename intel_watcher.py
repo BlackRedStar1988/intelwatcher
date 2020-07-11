@@ -1,20 +1,17 @@
 import argparse
-#import json
-#import math
 import sys
-#import datetime
 import requests
 import time
 import timeit
 
-#from configparser import ConfigParser
 from pymysql import connect
 from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
 
 from util.ingress import IntelMap, MapTiles
-from util.config import IntelWatcherConfig
+from util.config import Config
 from util.queries import create_queries
+from util.get_cookie import mechanize_cookie, selenium_cookie
 
 tiles_data = []
 
@@ -116,6 +113,20 @@ def scrape_all():
 
     print(f"Done. Put {updated_portals} Portals in your DB.")
 
+def send_cookie_webhook(text):
+    if config.cookie_wh:
+        data = {
+            "username": "Cookie Alarm",
+            "avatar_url": "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/apple/237/cookie_1f36a.png",
+            "content": config.cookie_text,
+            "embeds": [{
+                "description": f":cookie: {text}",
+                "color": 16073282
+            }]
+        }
+        result = requests.post(config.wh_url, json=data)
+        print(result)
+
 if __name__ == "__main__":
     print("Initializing...")
     portal_name = 8
@@ -128,25 +139,33 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config_path = args.config
 
-    config = IntelWatcherConfig(config_path)
+    config = Config(config_path)
     
 
     scraper = IntelMap(config.cookie)
 
     if not scraper.getCookieStatus():
-        print("There's something wrong with your Cookie! Try getting a new one")
-        if config.cookie_wh:
-            data = {
-                "username": "Cookie Alarm",
-                "avatar_url": "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/apple/237/cookie_1f36a.png",
-                "embeds": [{
-                    "description": f":cookie: Your Intel Cookie probably ran out! Please get a new one or check your account.\n{config.cookie_text}",
-                    "color": 16073282
-                }]
-            }
-            result = requests.post(config.wh_url, json=data)
-            print(result)
-        sys.exit(1)
+        cookie_get_success = False
+        if config.enable_cookie_getting:
+            print("Trying to get a new one")
+            while not cookie_get_success:
+                #try:
+                if config.cookie_getting_module == "mechanize":
+                        config.cookie = mechanize_cookie(config)
+                        cookie_get_success = True
+
+                elif config.cookie_getting_module == "selenium":
+                        config.cookie = selenium_cookie(config)
+                        cookie_get_success = True
+                """except Exception as e:
+                    print("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
+                    print(e)
+                    send_cookie_webhook("Got an Error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
+                    time.sleep(3600)"""
+            scraper.login(config.cookie)
+        else:
+            send_cookie_webhook("Your Intel Cookie probably ran out! Please get a new one or check your account.")
+            sys.exit(1)
     else:
         print("Cookie works!")
 

@@ -5,16 +5,6 @@ custom_cookie_text =
 webhook_url = webhook_url
 workers = 3
 
-[Ingress]
-login_type = google/facebook
-user =
-password =
-
-[Selenium]
-debug = False
-driver = chrome/chromium/firefox
-headless_mode = True
-
 [DB]
 scanner = mad/rdm
 scanner_db_name = maddb
@@ -24,3 +14,17 @@ host = 0.0.0.0
 port = 3306
 user = 
 password = 
+
+[Ingress Login]
+# Please look at the readme for the following options
+enable = False
+module = mechanize/selenium
+
+user = 
+password = 
+
+[Selenium]
+login_type = google/facebook
+driver = chrome/chromium/firefox
+debug = False
+headless_mode = True

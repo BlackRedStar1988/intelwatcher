@@ -1,7 +1,7 @@
 from configparser import ConfigParser
 
 
-class IntelWatcherConfig:
+class Config:
     def __init__(self, config_path):
         config_file = ConfigParser()
         config_file.read(config_path)
@@ -21,6 +21,16 @@ class IntelWatcherConfig:
         self.db_user = config_file.get("DB", "user")
         self.db_password = config_file.get("DB", "password")
 
+        self.enable_cookie_getting = config_file.getboolean("Ingress Login", "enable", fallback=False)
+        self.cookie_getting_module = config_file.get("Ingress Login", "module", fallback="mechanize").lower()
+        self.ingress_user = config_file.get("Ingress Login", "user", fallback="")
+        self.ingress_password = config_file.get("Ingress Login", "password", fallback="")
+
+        self.ingress_login_type = config_file.get("Selenium", "login_type", fallback="google").lower()
+        self.debug = config_file.getboolean("Selenium", "debug", fallback=False)
+        self.headless_mode = config_file.getboolean("Selenium", "headless_mode", fallback=True)
+        self.webdriver = config_file.get("Selenium", "driver", fallback="chrome").lower()
+
         with open("cookie.txt", encoding="utf-8") as cookie:
             self.cookie = cookie.read()
 
@@ -30,9 +40,4 @@ class SeleniumConfig:
         config_file = ConfigParser()
         config_file.read(config_path)
 
-        self.debug = config_file.getboolean("Selenium", "debug", fallback=False)
-        self.headless_mode = config_file.getboolean("Selenium", "headless_mode", fallback=True)
-        self.webdriver = config_file.get("Selenium", "driver", fallback="chrome").lower()
-        self.ingress_login_type = config_file.get("Ingress", "login_type", fallback="google").lower()
-        self.ingress_user = config_file.get("Ingress", "user")
-        self.ingress_password = config_file.get("Ingress", "password")
+        
