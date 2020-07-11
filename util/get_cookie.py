@@ -35,7 +35,6 @@ def mechanize_cookie(config):
         browser.form['pass'] = config.ingress_password
         response = browser.submit()
         tries += 1
-        print(f"try {tries}")
         time.sleep(2)
 
     # this is magic
