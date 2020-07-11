@@ -3,17 +3,21 @@ import time
 import argparse
 import random
 
+def _write_cookie(cookies):
+    final_cookie = ''.join("{}={}; ".format(k, v) for k, v in cookies.items())
+    with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
+        print('Write cookie to cookie.txt...')
+        cookie.write(final_cookie)
+
+    print("Your cookie:")
+    print(final_cookie)
+
+    return final_cookie
+
 def mechanize_cookie(config):
     import mechanize
 
     print("Logging into Facebook using mechanize")
-    def select_form():
-        browser.select_form(nr=0)
-        browser.form['email'] = config.ingress_user
-        browser.form['pass'] = config.ingress_password
-        response = browser.submit()
-        return response
-
     browser = mechanize.Browser()
     browser.set_handle_robots(False)
     cookies = mechanize.CookieJar()
@@ -27,23 +31,19 @@ def mechanize_cookie(config):
     # sometimes you have to fill in the form multiple times for whatever reason
     tries = 0
     while not "https://intel.ingress.com/" in browser.geturl() and tries < 5:
-        response = select_form()
+        browser.select_form(nr=0)
+        browser.form['email'] = config.ingress_user
+        browser.form['pass'] = config.ingress_password
+        response = browser.submit()
         tries += 1
+        print(f"try {tries}")
         time.sleep(2)
 
     # this is magic
     req = mechanize.Request(browser.geturl())
     cookie_list = browser._ua_handlers['_cookies'].cookiejar.make_cookies(response, req)
 
-    cookies = {c.name: c.value for c in cookie_list}
-    final_cookie = ''.join("{}={}; ".format(k, v) for k, v in cookies.items())
-
-    print("Your cookie:")
-    print(final_cookie)
-
-    with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
-        cookie.write(final_cookie)
-
+    final_cookie = _write_cookie({c.name: c.value for c in cookie_list})
     return final_cookie
 
 def selenium_cookie(config):
@@ -57,14 +57,6 @@ def selenium_cookie(config):
             driver.save_screenshot(filename)
         driver.quit()
         sys.exit(1)
-
-    def _write_cookie(driver):
-        print('Getting cookies...')
-        cookies = {c['name']: c['value'] for c in driver.get_cookies()}
-
-        with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
-            print('Write cookie data into "cookie.txt"...')
-            cookie.write(''.join("{}={}; ".format(k, v) for k, v in cookies.items()))
 
     if config.debug:
         debug_dir = Path(__file__).resolve().parent / 'debug'
@@ -168,7 +160,7 @@ def selenium_cookie(config):
 
         print('Waiting for login...')
         time.sleep(5)
-        _write_cookie(driver)
+        final_cookie = _write_cookie({c['name']: c['value'] for c in driver.get_cookies()})
     elif config.ingress_login_type == 'facebook':
         driver.get('http://intel.ingress.com')
         driver.find_element(By.XPATH, '//div[@id="dashboard_container"]//a[@class="button_link" and contains(text(), "Facebook")]').click()
@@ -203,18 +195,7 @@ def selenium_cookie(config):
         except NoSuchElementException:
             pass
 
-        _write_cookie(driver)
+        final_cookie = _write_cookie({c['name']: c['value'] for c in driver.get_cookies()})
 
     driver.quit()
-
-if __name__ == '__main__':
-    print('Initializing...')
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', default='config.ini', help='Config file to use')
-    args = parser.parse_args()
-    config_path = args.config
-
-    config = SeleniumConfig(config_path)
-
-    get_ingress_cookie(config)
+    return final_cookie
