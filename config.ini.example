@@ -14,3 +14,17 @@ host = 0.0.0.0
 port = 3306
 user = 
 password = 
+
+[Ingress Login]
+# Please look at the readme for the following options
+enable = False
+module = mechanize/selenium
+
+user = 
+password = 
+
+[Selenium]
+login_type = google/facebook
+driver = chrome/chromium/firefox
+debug = False
+headless_mode = True
