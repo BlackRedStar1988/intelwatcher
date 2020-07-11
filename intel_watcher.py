@@ -160,7 +160,7 @@ if __name__ == "__main__":
                     print("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
                     print(e)
                     send_cookie_webhook("Got an Error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
-                    time.sleep(3600)"""
+                    time.sleep(3600)
             scraper.login(config.cookie)
         else:
             send_cookie_webhook("Your Intel Cookie probably ran out! Please get a new one or check your account.")
