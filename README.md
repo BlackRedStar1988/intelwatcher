@@ -14,19 +14,33 @@ Intel Watcher uses PMSFs database structure. If you have PMSF set up, just put i
 Intel Watcher needs to be able to log into the Intel Map in order to get Portal info. It does that with the login cookie.
 
 #### Notes
-- Use a burner Account to get the Cookie (!!) **Scraper Accounts have been banned before**
-- The cookie runs out after 14 days. Intel Watcher can send Discord Webhooks when that happens, so you can manually get a new one. To re-new your cookie, follow below steps but begin with 2.
+- Use a burner Account to log into Intel (!!) **Scraper Accounts have been banned before**
+- A Cookie runs out after 14 days. Explained below are a few ways you can get a new one.
 
-### Get a cookie
+### How to get Cookies
+#### Automatic
+Intel Watcher has the ability to log into the Intel Map and renew the cookie on its own. It does that by simulating a browser, which can be done in different ways. In case logging in fails, you'll receive a Webhook (if enabled) and it tries again after an hour.
+
+**Mechanize**: Mechanize allows easy and light-weight web-browsing in Python but comes with a few disadvantages. **It only allows logging into Intel using Facebook**. So open your Ingress App, log into your burner Ingress Account and link it to a burner Facebook Account.
+
+In the config you then have to set `module` to `mechanize`, put in your login data and set `enable` to `True`. Ignore the Selenium section.
+
+**Selenium**: Selenium basically allows to drive a whole Webbrowser with Python, this means you'll have to install Chrome, Chromium or Firefox on your machine. [Quick installation can be found here](https://selenium-python.readthedocs.io/installation.html) anything else you'll have to google.
+
+You can then fill out the config: Set `module` to `selenium`, put in your Google/Facebook login and set `enable` to `True`. Under the Selenium section you can set the type of Browser you installed and what logintype you want to use.
+
+#### Manual
 1. Create an Ingress account using the Ingress Prime app on your phone
+2. Run `intel_watcher.py` once and let it fail to create a cookie.txt file
 2. Open a new incognito window in your browser
 2. Log into your burner account [here](https://intel.ingress.com/intel) with the same Email
-3. Zooming into your area *may* improve results. (not confirmed)
+3. Zooming into your area *may* improve results.
 4. Press F12 and go to the Network tab, refresh the site (F5), then select `intel` in left coulumn and your window should look something like the Screenshot below. (Chrome)
 
 ![csrftoken-same-cookie](https://i.imgur.com/y7KFNI0.png)
 
 5. Now copy everything after `cookie:` (the content highlighted in the red box) and paste it into `cookie.txt`
+6. You can repeat these steps when your cookie runs out. But begin with 3.
 
 ### BBOX
 To set up an area to scrape, go to [bboxfinder.com](http://bboxfinder.com) and select your desired area using the rectangle tool. Now copy the String after `Box` in the bottom field.
