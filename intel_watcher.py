@@ -148,15 +148,15 @@ if __name__ == "__main__":
         if config.enable_cookie_getting:
             print("Trying to get a new one")
             while not cookie_get_success:
-                #try:
-                if config.cookie_getting_module == "mechanize":
-                        config.cookie = mechanize_cookie(config)
-                        cookie_get_success = True
+                try:
+                    if config.cookie_getting_module == "mechanize":
+                            config.cookie = mechanize_cookie(config)
+                            cookie_get_success = True
 
-                elif config.cookie_getting_module == "selenium":
-                        config.cookie = selenium_cookie(config)
-                        cookie_get_success = True
-                """except Exception as e:
+                    elif config.cookie_getting_module == "selenium":
+                            config.cookie = selenium_cookie(config)
+                            cookie_get_success = True
+                except Exception as e:
                     print("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
                     print(e)
                     send_cookie_webhook("Got an Error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
