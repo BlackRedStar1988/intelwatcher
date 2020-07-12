@@ -32,7 +32,7 @@ class Config:
         self.headless_mode = config_file.getboolean("Selenium", "headless_mode", fallback=True)
         self.webdriver = config_file.get("Selenium", "driver", fallback="chrome").lower()
 
-        with open("cookie.txt", encoding="utf-8", mode="a+") as cookie:
+        with open("cookie.txt", encoding="utf-8", mode="r+") as cookie:
             self.cookie = cookie.read()
 
 
