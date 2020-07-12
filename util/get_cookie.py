@@ -23,19 +23,24 @@ def mechanize_cookie(config):
     browser.set_cookiejar(cookies)
     browser.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.7 (KHTML, like Gecko) Chrome/7.0.517.41 Safari/534.7')]
     browser.set_handle_refresh(False)
+    print("Everything set - Let's go")
 
     url = 'https://www.facebook.com/v3.2/dialog/oauth?client_id=449856365443419&redirect_uri=https%3A%2F%2Fintel.ingress.com%2F'
     browser.open(url)
+    print("Opened Facebook Login Page")
 
     # sometimes you have to fill in the form multiple times for whatever reason
     tries = 0
     while not "https://intel.ingress.com/" in browser.geturl() and tries < 5:
+        tries += 1
+        print(f"Trying to log into Intel: Try {tries}/5")
         browser.select_form(nr=0)
         browser.form['email'] = config.ingress_user
         browser.form['pass'] = config.ingress_password
         response = browser.submit()
-        tries += 1
         time.sleep(2)
+
+    print("Got through. Now getting that cookie")
 
     # this is magic
     req = mechanize.Request(browser.geturl())
