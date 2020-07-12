@@ -43,10 +43,6 @@ def scrape_tile(tile, scraper, progress, task, tiles_data):
     while tries < 3:
         try:
             t_data = scraper.get_entities([iitc_tile_name])
-            """for tiled in t_data.get("result", {})["map"].values():
-                if not "error" in tiled["gameEntities"]:
-                    for entry in tiled["gameEntities"]:
-                        if entry[2][0] == "p":"""
             tiles_data.append(t_data["result"]["map"])
             tries = 3
         except Exception as e:
@@ -123,7 +119,7 @@ def send_cookie_webhook(text):
             }]
         }
         result = requests.post(config.wh_url, json=data)
-        print(result)
+        print(f"Webhook response: {result.status_code}")
 
 if __name__ == "__main__":
     print("Initializing...")
@@ -158,7 +154,7 @@ if __name__ == "__main__":
                 except Exception as e:
                     print("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
                     print(e)
-                    send_cookie_webhook("Got an Error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
+                    send_cookie_webhook("Got an error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
                     time.sleep(3600)
             scraper.login(config.cookie)
         else:
