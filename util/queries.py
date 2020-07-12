@@ -1,9 +1,19 @@
-from pymysql import connect
+import pymysql
+
 from datetime import datetime, timedelta 
 
-class create_queries():
-    def __init__(self, config, cursor):
-        self.cursor = cursor
+class Queries():
+    def __init__(self, config):
+        self.connection = pymysql.connect(
+            host=config.db_host,
+            user=config.db_user,
+            password=config.db_password,
+            database=config.db_name_scan,
+            port=config.db_port,
+            autocommit=True
+        )
+        self.cursor = self.connection.cursor()
+
         self.portal = config.db_name_portal
         self.schema = config.scan_type
         self.ingress = config.db_name_portal
@@ -40,3 +50,7 @@ class create_queries():
             self.cursor.execute(f"SELECT id FROM pokestop WHERE name IS NULL;")
         stops = self.cursor.fetchall()
         return stops
+
+    def close(self):
+        self.cursor.close()
+        self.connection.close()

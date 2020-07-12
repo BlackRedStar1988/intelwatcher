@@ -11,6 +11,7 @@ class Config:
         self.cookie_text = config_file.get("Config", "custom_cookie_text", fallback="")
         self.wh_url = config_file.get("Config", "webhook_url")
         self.workers = config_file.getint("Config", "workers", fallback=1)
+        self.areasleep = config_file.getint("Config", "sleep_between_areas", fallback=0)
 
         self.scan_type = config_file.get("DB", "scanner").lower()
         self.db_name_scan = config_file.get("DB", "scanner_db_name")
