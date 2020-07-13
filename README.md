@@ -10,7 +10,7 @@ A script that allows you to scrape the Ingress Intel Map and use that informatio
 ### Database
 Intel Watcher uses PMSFs database structure. If you have PMSF set up, just put its DB name in your config to also have Portals shown on your Map. Else, you can run `mysql your_db_name < ingress_portals.sql` to create a new table.
 
-By default, the credentials you put in will also be used to access your MAD/RDM databse. If you want to change those, you can add `scan_host`, `scan_port`, `scan_user` and/or `scan_password` to the config and put in different options.
+By default, the credentials you put in will also be used to access both your RDM/MAD and Portal database. If you have them running on different servers, you can add `scan_host`, `scan_port`, `scan_user` and/or `scan_password` to the config and put in different options to define access to your MAD/RDM database.
 
 ### Cookies
 Intel Watcher needs to be able to log into the Intel Map in order to get Portal info. It does that with the login cookie.
