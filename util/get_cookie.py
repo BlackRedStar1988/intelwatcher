@@ -1,6 +1,8 @@
 import sys
+import os
 import time
 import logging
+import glob
 
 
 def _write_cookie(cookies):
@@ -81,6 +83,11 @@ def selenium_cookie(config):
 
     debug_dir = Path(__file__).resolve().parent.parent / 'debug'
     debug_dir.mkdir(exist_ok=True)
+
+    # cleanup screenshots
+    files = glob.glob('{}/*.png'.format(str(debug_dir)))
+    for f in files:
+        os.remove(f)
 
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
 
