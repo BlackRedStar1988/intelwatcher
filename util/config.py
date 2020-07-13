@@ -39,11 +39,3 @@ class Config:
 
         with open("cookie.txt", encoding="utf-8", mode="r+") as cookie:
             self.cookie = cookie.read()
-
-
-class SeleniumConfig:
-    def __init__(self, config_path):
-        config_file = ConfigParser()
-        config_file.read(config_path)
-
-        
