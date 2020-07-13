@@ -22,6 +22,11 @@ class Config:
         self.db_user = config_file.get("DB", "user")
         self.db_password = config_file.get("DB", "password")
 
+        self.scan_db_host = config_file.get("DB", "scan_host", fallback=self.db_host)
+        self.scan_db_port = config_file.getint("DB", "scan_port", fallback=self.db_port)
+        self.scan_db_user = config_file.get("DB", "scan_user", fallback=self.db_user)
+        self.scan_db_password = config_file.get("DB", "scan_password", fallback=self.db_password)
+
         self.enable_cookie_getting = config_file.getboolean("Ingress Login", "enable", fallback=False)
         self.cookie_getting_module = config_file.get("Ingress Login", "module", fallback="mechanize").lower()
         self.ingress_user = config_file.get("Ingress Login", "user", fallback="")
