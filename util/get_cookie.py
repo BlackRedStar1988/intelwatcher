@@ -1,6 +1,7 @@
 import sys
 import time
-import argparse
+import logging
+
 
 def _write_cookie(cookies):
     final_cookie = ''.join("{}={}; ".format(k, v) for k, v in cookies.items())
@@ -13,11 +14,23 @@ def _write_cookie(cookies):
 
     return final_cookie
 
+
 def mechanize_cookie(config):
+    """Returns a new Intel Ingress cookie via mechanize."""
     import mechanize
 
     print("Logging into Facebook using mechanize")
     browser = mechanize.Browser()
+
+    if config.debug:
+        logger = logging.getLogger('mechanize')
+        logger.addHandler(logging.StreamHandler(sys.stdout))
+        logger.setLevel(logging.DEBUG)
+
+        browser.set_debug_http(True)
+        browser.set_debug_responses(True)
+        browser.set_debug_redirects(True)
+
     browser.set_handle_robots(False)
     cookies = mechanize.CookieJar()
     browser.set_cookiejar(cookies)
@@ -31,7 +44,7 @@ def mechanize_cookie(config):
 
     # sometimes you have to fill in the form multiple times for whatever reason
     tries = 0
-    while not "https://intel.ingress.com/" in browser.geturl() and tries < 5:
+    while "https://intel.ingress.com/" not in browser.geturl() and tries < 5:
         tries += 1
         print(f"Trying to log into Intel: Try {tries}/5")
         browser.select_form(nr=0)
@@ -40,30 +53,34 @@ def mechanize_cookie(config):
         response = browser.submit()
         time.sleep(2)
 
-    print("Got through. Now getting that cookie")
+    if "https://intel.ingress.com/" in response.geturl() and response.getcode() == 200:
+        print("Got through. Now getting that cookie")
 
-    # this is magic
-    req = mechanize.Request(browser.geturl())
-    cookie_list = browser._ua_handlers['_cookies'].cookiejar.make_cookies(response, req)
+        # this is magic
+        req = mechanize.Request(browser.geturl())
+        cookie_list = browser._ua_handlers['_cookies'].cookiejar.make_cookies(response, req)
 
-    final_cookie = _write_cookie({c.name: c.value for c in cookie_list})
-    return final_cookie
+        final_cookie = _write_cookie({c.name: c.value for c in cookie_list})
+        return final_cookie
+    else:
+        print("Error: failed to login into Intel")
+        return ""
+
 
 def selenium_cookie(config):
+    """Returns a new Intel Ingress cookie via selenium webdriver."""
     from pathlib import Path
     from selenium import webdriver
     from selenium.common.exceptions import NoSuchElementException
     from selenium.webdriver.common.by import By
 
-    def _debug_save_screenshot(debug, driver, filename):
-        if debug:
-            driver.save_screenshot(filename)
+    def _save_screenshot_on_failure(filename):
+        driver.save_screenshot('{}/{}'.format(str(debug_dir), filename))
         driver.quit()
         sys.exit(1)
 
-    if config.debug:
-        debug_dir = Path(__file__).resolve().parent / 'debug'
-        debug_dir.mkdir(exist_ok=True)
+    debug_dir = Path(__file__).resolve().parent.parent / 'debug'
+    debug_dir.mkdir(exist_ok=True)
 
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
 
@@ -106,7 +123,7 @@ def selenium_cookie(config):
             driver.find_element(By.CSS_SELECTOR, f'.s-btn__{config.ingress_login_type}').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/google_login_init.png')
+            _save_screenshot_on_failure('google_login_init.png')
 
         print('Enter username...')
         try:
@@ -114,7 +131,7 @@ def selenium_cookie(config):
             driver.find_element(By.ID, 'identifierNext').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/google_login_username.png')
+            _save_screenshot_on_failure('google_login_username.png')
 
         print('Enter password...')
         try:
@@ -132,10 +149,14 @@ def selenium_cookie(config):
             driver.find_element(By.ID, 'passwordNext').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/google_login_password.png')
+            _save_screenshot_on_failure('google_login_password.png')
 
         print('Waiting for login...')
         time.sleep(5)
+
+        if 'https://accounts.google.com/' in driver.current_url:
+            print('Failed to login into Google')
+            _save_screenshot_on_failure('google_login_security.png')
 
         print('Login to Intel Ingress')
         try:
@@ -143,7 +164,7 @@ def selenium_cookie(config):
             driver.find_element(By.ID, 'profileIdentifier').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/intel_login_init.png')
+            _save_screenshot_on_failure('intel_login_init.png')
 
         print('Waiting for login...')
         time.sleep(5)
@@ -157,20 +178,20 @@ def selenium_cookie(config):
         try:
             driver.find_element(By.ID, 'email').send_keys(config.ingress_user)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_username.png')
+            _save_screenshot_on_failure('fb_login_username.png')
 
         print('Enter password...')
         try:
             driver.find_element(By.ID, 'pass').send_keys(config.ingress_password)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_password.png')
+            _save_screenshot_on_failure('fb_login_password.png')
 
         print('Waiting for login...')
         try:
             driver.find_element(By.ID, 'loginbutton').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
-            _debug_save_screenshot(config.debug, driver, str(debug_dir) + '/fb_login_login.png')
+            _save_screenshot_on_failure('fb_login_login.png')
 
         time.sleep(5)
 
