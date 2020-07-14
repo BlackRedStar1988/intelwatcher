@@ -7,31 +7,31 @@ import json
 
 from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
-from rich import print
 
 from util.ingress import IntelMap, MapTiles
 from util.config import Config
 from util.queries import Queries
 from util.get_cookie import mechanize_cookie, selenium_cookie
+from util.console import Log
 
 def update_wp(wp_type, points):
     updated = 0
-    print(f"Found {len(points)} {wp_type}s")
+    log.info(f"Found {len(points)} {wp_type}s")
     for wp in points:
         portal_details = scraper.get_portal_details(wp[0])
         if portal_details is not None:
             try:
                 queries.update_point(wp_type, portal_details.get("result")[portal_name], portal_details.get("result")[portal_url], wp[0])
                 updated += 1
-                print(f"Updated {wp_type} {portal_details.get('result')[portal_name]}")
+                log.info(f"Updated {wp_type} {portal_details.get('result')[portal_name]}")
             except Exception as e:
-                print(f"Could not update {wp_type} {wp[0]}")
-                print(e)
+                log.error(f"Could not update {wp_type} {wp[0]}")
+                log.error(e)
         else:
-            print(f"Couldn't get Portal info for {wp_type} {wp[0]}")
+            log.info(f"Couldn't get Portal info for {wp_type} {wp[0]}")
             
-    print(f"Updated {updated} {wp_type}s")
-    print("")
+    log.info(f"Updated {updated} {wp_type}s")
+    log.info("")
 
 def scrape_tile(tile, scraper, progress, task, tiles_data):
     iitc_xtile = int(tile[0])
@@ -47,7 +47,7 @@ def scrape_tile(tile, scraper, progress, task, tiles_data):
             tries = 3
         except Exception as e:
             tries += 1
-            print(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
+            progress.console.log(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
 
 def scrape_all():
     bbox = list(config.bbox.split(';'))
@@ -64,10 +64,10 @@ def scrape_all():
         portals = []
         tiles_data = []
 
-        print("")
-        print(f"[yellow]Getting area #{area}")
-        print(f"Total tiles to scrape: {total_tiles}")
-        with Progress() as progress:
+        log.info("")
+        log.info(f"[yellow]Getting area #{area}")
+        log.info(f"Total tiles to scrape: {total_tiles}")
+        with Progress(console=log.console) as progress:
             task = progress.add_task("Scraping Portals", total=total_tiles)
             with ThreadPoolExecutor(max_workers=config.workers) as executor: 
                 for tile in tiles:
@@ -85,13 +85,13 @@ def scrape_all():
                             p_img = entry[2][7]
                             portals.append([p_id, p_lat, p_lon, p_name, p_img])
         except Exception as e:
-            print("Something went wrong while parsing Portals")
-            print(e)
+            log.info("Something went wrong while parsing Portals")
+            log.info(e)
 
-        print(f"Found {len(portals)} Portals")
+        log.info(f"Found {len(portals)} Portals")
         queries = Queries(config)
         updated_portals = 0
-        with Progress() as progress:
+        with Progress(log.console) as progress:
             task = progress.add_task("Updating DB", total=len(portals))
             for p_id, lat, lon, p_name, p_img in portals:
                 updated_ts = int(time.time())
@@ -99,12 +99,12 @@ def scrape_all():
                     queries.update_portal(p_id, p_name, p_img, lat, lon, updated_ts)
                     updated_portals += 1
                 except Exception as e:
-                    print(f"Failed putting Portal {p_name} ({p_id}) in your DB")
-                    print(e)
+                    progress.console.log(f"Failed putting Portal {p_name} ({p_id}) in your DB")
+                    progress.console.log(e)
                 progress.update(task, advance=1)
 
         queries.close()
-        print(f"Put {updated_portals} Portals in your DB.")
+        log.info(f"Put {updated_portals} Portals in your DB.")
         time.sleep(config.areasleep)
 
 def send_cookie_webhook(text):
@@ -119,10 +119,9 @@ def send_cookie_webhook(text):
             }]
         }
         result = requests.post(config.wh_url, json=data)
-        print(f"Webhook response: {result.status_code}")
+        log.info(f"Webhook response: {result.status_code}")
 
 if __name__ == "__main__":
-    print("Initializing...")
     portal_name = 8
     portal_url = 7
 
@@ -130,7 +129,13 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--update", action='store_true', help="Updates all Gyms and Stops using Portal info")
     parser.add_argument("-c", "--config", default="config.ini", help="Config file to use")
     parser.add_argument("-w", "--workers", default=0, help="Workers")
+    parser.add_argument("-d", "--debug", action='store_true', help="Run the script in debug mode")
     args = parser.parse_args()
+
+    log = Log(args.debug)
+    log.info("Initializing...")
+    log.debug("test")
+
     config_path = args.config
 
     config = Config(config_path)
@@ -138,22 +143,22 @@ if __name__ == "__main__":
     scraper = IntelMap(config.cookie)
 
     if not scraper.getCookieStatus():
-        print("[red]Oops! Looks like you have a problem with your cookie.")
+        log.error("Oops! Looks like you have a problem with your cookie.")
         cookie_get_success = False
         if config.enable_cookie_getting:
-            print("Trying to get a new one")
+            log.info("Trying to get a new one")
             while not cookie_get_success:
                 try:
                     if config.cookie_getting_module == "mechanize":
-                            config.cookie = mechanize_cookie(config)
+                            config.cookie = mechanize_cookie(config, log)
                             cookie_get_success = True
 
                     elif config.cookie_getting_module == "selenium":
-                            config.cookie = selenium_cookie(config)
+                            config.cookie = selenium_cookie(config, log)
                             cookie_get_success = True
                 except Exception as e:
-                    print("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
-                    print(e)
+                    log.error("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
+                    log.error(e)
                     send_cookie_webhook("Got an error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
                     time.sleep(3600)
             scraper.login(config.cookie)
@@ -161,9 +166,9 @@ if __name__ == "__main__":
             send_cookie_webhook("Your Intel Cookie probably ran out! Please get a new one or check your account.")
             sys.exit(1)
     else:
-        print("[green]Cookie works!")
+        log.info("[green]Cookie works!")
 
-    print("[green]Got everything. Starting to scrape now.")
+    log.info("[green]Got everything. Starting to scrape now.")
 
     if args.update:
         queries = Queries(config)
@@ -180,4 +185,4 @@ if __name__ == "__main__":
     start = timeit.default_timer()
     scrape_all()
     stop = timeit.default_timer()
-    print(f"[yellow]Total runtime: {round(stop - start, 1)} seconds")
+    log.info(f"[yellow]Total runtime: {round(stop - start, 1)} seconds")

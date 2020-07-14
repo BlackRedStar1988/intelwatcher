@@ -5,30 +5,26 @@ import logging
 import glob
 
 
-def _write_cookie(cookies):
+def _write_cookie(log, cookies):
     final_cookie = ''.join("{}={}; ".format(k, v) for k, v in cookies.items())
     with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
-        print('Write cookie to cookie.txt...')
+        log.info('Write cookie to cookie.txt...')
         cookie.write(final_cookie)
 
-    print("Your cookie:")
-    print(final_cookie)
+    log.info("Your cookie:")
+    log.info(final_cookie)
 
     return final_cookie
 
 
-def mechanize_cookie(config):
+def mechanize_cookie(config, log):
     """Returns a new Intel Ingress cookie via mechanize."""
     import mechanize
 
-    print("Logging into Facebook using mechanize")
+    log.info("Logging into Facebook using mechanize")
     browser = mechanize.Browser()
 
-    if config.debug:
-        logger = logging.getLogger('mechanize')
-        logger.addHandler(logging.StreamHandler(sys.stdout))
-        logger.setLevel(logging.DEBUG)
-
+    if log.is_debug:
         browser.set_debug_http(True)
         browser.set_debug_responses(True)
         browser.set_debug_redirects(True)
@@ -38,38 +34,42 @@ def mechanize_cookie(config):
     browser.set_cookiejar(cookies)
     browser.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.7 (KHTML, like Gecko) Chrome/7.0.517.41 Safari/534.7')]
     browser.set_handle_refresh(False)
-    print("Everything set - Let's go")
+    log.info("Everything set - Let's go")
 
     url = 'https://www.facebook.com/v3.2/dialog/oauth?client_id=449856365443419&redirect_uri=https%3A%2F%2Fintel.ingress.com%2F'
     browser.open(url)
-    print("Opened Facebook Login Page")
+    log.info("Opened Facebook Login Page")
+    log.debug(browser.geturl())
 
     # sometimes you have to fill in the form multiple times for whatever reason
     tries = 0
     while "https://intel.ingress.com/" not in browser.geturl() and tries < 5:
         tries += 1
-        print(f"Trying to log into Intel: Try {tries}/5")
+        log.info(f"Trying to log into Intel: Try {tries}/5")
         browser.select_form(nr=0)
         browser.form['email'] = config.ingress_user
         browser.form['pass'] = config.ingress_password
         response = browser.submit()
         time.sleep(2)
+        log.debug(browser.geturl())
 
     if "https://intel.ingress.com/" in response.geturl() and response.getcode() == 200:
-        print("Got through. Now getting that cookie")
+        log.info("Got through. Now getting that cookie")
+        log.debug(browser.geturl())
 
         # this is magic
         req = mechanize.Request(browser.geturl())
         cookie_list = browser._ua_handlers['_cookies'].cookiejar.make_cookies(response, req)
 
-        final_cookie = _write_cookie({c.name: c.value for c in cookie_list})
+        final_cookie = _write_cookie(log, {c.name: c.value for c in cookie_list})
         return final_cookie
     else:
-        print("Error: failed to login into Intel")
+        log.error("Failed to login into Intel")
+        log.info(browser.geturl())
         return ""
 
 
-def selenium_cookie(config):
+def selenium_cookie(config, log):
     """Returns a new Intel Ingress cookie via selenium webdriver."""
     from pathlib import Path
     from selenium import webdriver
@@ -123,7 +123,7 @@ def selenium_cookie(config):
             driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 
     if config.ingress_login_type == 'google':
-        print('Login to Google via Stackoverflow')
+        log.info('Login to Google via Stackoverflow')
         driver.get('https://stackoverflow.com/users/login?ssrc=head')
 
         try:
@@ -132,7 +132,7 @@ def selenium_cookie(config):
         except NoSuchElementException:
             _save_screenshot_on_failure('google_login_init.png')
 
-        print('Enter username...')
+        log.info('Enter username...')
         try:
             driver.find_element(By.ID, 'identifierId').send_keys(config.ingress_user)
             driver.find_element(By.ID, 'identifierNext').click()
@@ -140,7 +140,7 @@ def selenium_cookie(config):
         except NoSuchElementException:
             _save_screenshot_on_failure('google_login_username.png')
 
-        print('Enter password...')
+        log.info('Enter password...')
         try:
             pw_element = driver.find_element(By.ID, 'password').find_element(By.NAME, 'password')
 
@@ -158,14 +158,14 @@ def selenium_cookie(config):
         except NoSuchElementException:
             _save_screenshot_on_failure('google_login_password.png')
 
-        print('Waiting for login...')
+        log.info('Waiting for login...')
         time.sleep(5)
 
         if 'https://accounts.google.com/' in driver.current_url:
-            print('Failed to login into Google')
+            log.info('Failed to login into Google')
             _save_screenshot_on_failure('google_login_security.png')
 
-        print('Login to Intel Ingress')
+        log.info('Login to Intel Ingress')
         try:
             driver.get('https://accounts.google.com/o/oauth2/v2/auth?client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&redirect_uri=https://intel.ingress.com/&prompt=consent%20select_account&state=GOOGLE&scope=email%20profile&response_type=code')
             driver.find_element(By.ID, 'profileIdentifier').click()
@@ -173,27 +173,27 @@ def selenium_cookie(config):
         except NoSuchElementException:
             _save_screenshot_on_failure('intel_login_init.png')
 
-        print('Waiting for login...')
+        log.info('Waiting for login...')
         time.sleep(5)
-        final_cookie = _write_cookie({c['name']: c['value'] for c in driver.get_cookies()})
+        final_cookie = _write_cookie(log, {c['name']: c['value'] for c in driver.get_cookies()})
     elif config.ingress_login_type == 'facebook':
         driver.get('http://intel.ingress.com')
         driver.find_element(By.XPATH, '//div[@id="dashboard_container"]//a[@class="button_link" and contains(text(), "Facebook")]').click()
         driver.implicitly_wait(10)
 
-        print('Enter username...')
+        log.info('Enter username...')
         try:
             driver.find_element(By.ID, 'email').send_keys(config.ingress_user)
         except NoSuchElementException:
             _save_screenshot_on_failure('fb_login_username.png')
 
-        print('Enter password...')
+        log.info('Enter password...')
         try:
             driver.find_element(By.ID, 'pass').send_keys(config.ingress_password)
         except NoSuchElementException:
             _save_screenshot_on_failure('fb_login_password.png')
 
-        print('Waiting for login...')
+        log.info('Waiting for login...')
         try:
             driver.find_element(By.ID, 'loginbutton').click()
             driver.implicitly_wait(10)
@@ -202,7 +202,7 @@ def selenium_cookie(config):
 
         time.sleep(5)
 
-        print('Confirm oauth login when needed...')
+        log.info('Confirm oauth login when needed...')
         try:
             driver.find_element(By.ID, 'platformDialogForm').submit()
             driver.implicitly_wait(10)
@@ -210,7 +210,7 @@ def selenium_cookie(config):
         except NoSuchElementException:
             pass
 
-        final_cookie = _write_cookie({c['name']: c['value'] for c in driver.get_cookies()})
+        final_cookie = _write_cookie(log, {c['name']: c['value'] for c in driver.get_cookies()})
 
     driver.quit()
     return final_cookie
