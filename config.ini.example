@@ -28,5 +28,4 @@ password =
 [Selenium]
 login_type = google/facebook
 driver = chrome/chromium/firefox
-debug = False
 headless_mode = True

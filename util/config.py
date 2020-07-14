@@ -33,7 +33,6 @@ class Config:
         self.ingress_password = config_file.get("Ingress Login", "password", fallback="")
 
         self.ingress_login_type = config_file.get("Selenium", "login_type", fallback="google").lower()
-        self.debug = config_file.getboolean("Selenium", "debug", fallback=False)
         self.headless_mode = config_file.getboolean("Selenium", "headless_mode", fallback=True)
         self.webdriver = config_file.get("Selenium", "driver", fallback="chrome").lower()
 
