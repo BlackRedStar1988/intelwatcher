@@ -15,7 +15,6 @@ from util.ingress import IntelMap, MapTiles
 from util.config import Config
 from util.queries import Queries
 from util.get_cookie import mechanize_cookie, selenium_cookie
-from util.console import Log
 
 def update_wp(wp_type, points):
     updated = 0
