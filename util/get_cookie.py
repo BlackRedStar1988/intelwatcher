@@ -4,7 +4,6 @@ import time
 import logging
 import glob
 
-
 def _write_cookie(log, cookies):
     final_cookie = ''.join("{}={}; ".format(k, v) for k, v in cookies.items())
     with open('cookie.txt', encoding='utf-8', mode='w') as cookie:
@@ -24,7 +23,7 @@ def mechanize_cookie(config, log):
     log.info("Logging into Facebook using mechanize")
     browser = mechanize.Browser()
 
-    if log.is_debug:
+    if log.level <= 10:
         browser.set_debug_http(True)
         browser.set_debug_responses(True)
         browser.set_debug_redirects(True)

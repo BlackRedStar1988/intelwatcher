@@ -4,9 +4,12 @@ import requests
 import time
 import timeit
 import json
+import logging
+import coloredlogs
 
 from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
+from rich import print
 
 from util.ingress import IntelMap, MapTiles
 from util.config import Config
@@ -26,7 +29,7 @@ def update_wp(wp_type, points):
                 log.info(f"Updated {wp_type} {portal_details.get('result')[portal_name]}")
             except Exception as e:
                 log.error(f"Could not update {wp_type} {wp[0]}")
-                log.error(e)
+                log.exception(e)
         else:
             log.info(f"Couldn't get Portal info for {wp_type} {wp[0]}")
             
@@ -47,7 +50,7 @@ def scrape_tile(tile, scraper, progress, task, tiles_data):
             tries = 3
         except Exception as e:
             tries += 1
-            progress.console.log(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
+            print(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
 
 def scrape_all():
     bbox = list(config.bbox.split(';'))
@@ -65,9 +68,9 @@ def scrape_all():
         tiles_data = []
 
         log.info("")
-        log.info(f"[yellow]Getting area #{area}")
+        log.warning(f"Getting area #{area}")
         log.info(f"Total tiles to scrape: {total_tiles}")
-        with Progress(console=log.console) as progress:
+        with Progress() as progress:
             task = progress.add_task("Scraping Portals", total=total_tiles)
             with ThreadPoolExecutor(max_workers=config.workers) as executor: 
                 for tile in tiles:
@@ -86,12 +89,12 @@ def scrape_all():
                             portals.append([p_id, p_lat, p_lon, p_name, p_img])
         except Exception as e:
             log.info("Something went wrong while parsing Portals")
-            log.info(e)
+            log.exception(e)
 
         log.info(f"Found {len(portals)} Portals")
         queries = Queries(config)
         updated_portals = 0
-        with Progress(log.console) as progress:
+        with Progress() as progress:
             task = progress.add_task("Updating DB", total=len(portals))
             for p_id, lat, lon, p_name, p_img in portals:
                 updated_ts = int(time.time())
@@ -99,12 +102,15 @@ def scrape_all():
                     queries.update_portal(p_id, p_name, p_img, lat, lon, updated_ts)
                     updated_portals += 1
                 except Exception as e:
-                    progress.console.log(f"Failed putting Portal {p_name} ({p_id}) in your DB")
-                    progress.console.log(e)
+                    log.error(f"Failed putting Portal {p_name} ({p_id}) in your DB")
+                    log.exception(e)
                 progress.update(task, advance=1)
 
         queries.close()
-        log.info(f"Put {updated_portals} Portals in your DB.")
+        if updated_portals == len(portals):
+            log.success("Put all Portals in your DB.")
+        else:
+            log.critical(f"Only put {updated_portals} in your DB")
         time.sleep(config.areasleep)
 
 def send_cookie_webhook(text):
@@ -132,9 +138,22 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", action='store_true', help="Run the script in debug mode")
     args = parser.parse_args()
 
-    log = Log(args.debug)
+    # LOG STUFF
+    success_level = 25
+    if args.debug:
+        log_level = "DEBUG"
+    else:
+        log_level = "INFO"
+
+    log = logging.getLogger(__name__)
+    logging.addLevelName(success_level, "SUCCESS")
+    def success(self, message, *args, **kws):
+        self._log(success_level, message, args, **kws) 
+    logging.Logger.success = success
+    coloredlogs.DEFAULT_LEVEL_STYLES["debug"] = {"color": "blue"}
+    coloredlogs.install(level=log_level, logger=log, fmt="%(message)s")
+
     log.info("Initializing...")
-    log.debug("test")
 
     config_path = args.config
 
@@ -158,7 +177,7 @@ if __name__ == "__main__":
                             cookie_get_success = True
                 except Exception as e:
                     log.error("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
-                    log.error(e)
+                    log.exception(e)
                     send_cookie_webhook("Got an error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
                     time.sleep(3600)
             scraper.login(config.cookie)
@@ -166,9 +185,9 @@ if __name__ == "__main__":
             send_cookie_webhook("Your Intel Cookie probably ran out! Please get a new one or check your account.")
             sys.exit(1)
     else:
-        log.info("[green]Cookie works!")
+        log.success("Cookie works!")
 
-    log.info("[green]Got everything. Starting to scrape now.")
+    log.success("Got everything. Starting to scrape now.")
 
     if args.update:
         queries = Queries(config)
@@ -185,4 +204,4 @@ if __name__ == "__main__":
     start = timeit.default_timer()
     scrape_all()
     stop = timeit.default_timer()
-    log.info(f"[yellow]Total runtime: {round(stop - start, 1)} seconds")
+    log.success(f"Total runtime: {round(stop - start, 1)} seconds")
