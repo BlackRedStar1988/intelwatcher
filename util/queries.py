@@ -10,6 +10,7 @@ class Queries():
             password=config.db_password,
             database=config.db_name_portal,
             port=config.db_port,
+            charset="utf-8",
             autocommit=True
         )
         self.cursor = self.connection.cursor()
@@ -20,6 +21,7 @@ class Queries():
             password=config.scan_db_password,
             database=config.db_name_scan,
             port=config.scan_db_port,
+            charset="utf-8",
             autocommit=True
         )
         self.scan_cursor = self.scan_connection.cursor()
