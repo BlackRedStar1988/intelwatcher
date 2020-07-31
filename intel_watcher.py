@@ -16,6 +16,12 @@ from util.config import Config
 from util.queries import Queries
 from util.get_cookie import mechanize_cookie, selenium_cookie
 
+def maybe_byte(name):
+    try:
+        return name.decode()
+    except:
+        return name
+
 def update_wp(wp_type, points):
     updated = 0
     log.info(f"Found {len(points)} {wp_type}s")
@@ -23,12 +29,7 @@ def update_wp(wp_type, points):
         portal_details = scraper.get_portal_details(wp[0])
         if portal_details is not None:
             try:
-                pname = portal_details.get("result")[portal_name].decode()
-            except:
-                pname = portal_details.get("result")[portal_name]
-                
-            try:
-                queries.update_point(wp_type, pname, portal_details.get("result")[portal_url], wp[0])
+                queries.update_point(wp_type, maybe_byte(portal_details.get("result")[portal_name]), maybe_byte(portal_details.get("result")[portal_url]), wp[0])
                 updated += 1
                 log.info(f"Updated {wp_type} {pname}")
             except Exception as e:
@@ -88,8 +89,8 @@ def scrape_all():
                             p_id = entry[0]
                             p_lat = entry[2][2]/1e6
                             p_lon = entry[2][3]/1e6
-                            p_name = entry[2][8]
-                            p_img = entry[2][7]
+                            p_name = maybe_byte(entry[2][8])
+                            p_img = maybe_byte(entry[2][7])
                             portals.append([p_id, p_lat, p_lon, p_name, p_img])
         except Exception as e:
             log.info("Something went wrong while parsing Portals")
