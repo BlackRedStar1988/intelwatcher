@@ -23,9 +23,14 @@ def update_wp(wp_type, points):
         portal_details = scraper.get_portal_details(wp[0])
         if portal_details is not None:
             try:
-                queries.update_point(wp_type, str(portal_details.get("result")[portal_name]), portal_details.get("result")[portal_url], wp[0])
+                pname = portal_details.get("result")[portal_name].decode()
+            except:
+                pname = portal_details.get("result")[portal_name]
+                
+            try:
+                queries.update_point(wp_type, pname, portal_details.get("result")[portal_url], wp[0])
                 updated += 1
-                log.info(f"Updated {wp_type} {portal_details.get('result')[portal_name]}")
+                log.info(f"Updated {wp_type} {pname}")
             except Exception as e:
                 log.error(f"Could not update {wp_type} {wp[0]}")
                 log.exception(e)
