@@ -2,6 +2,8 @@
 
 A script that allows you to scrape the Ingress Intel Map and use that information to fill a database or update Stops/Gyms that have missing info.
 
+This fork optimized ClarkyKent's code and adds multithreading, making it run about 50 times faster for me (10 minutes to 10 seconds). It also adds options to update the login cookie automatically, by logging into Intel on its own.
+
 ### Credits
 
 - [ClarkyKent](https://github.com/ClarkyKent/ingress_scraper) who made the original Scraper
