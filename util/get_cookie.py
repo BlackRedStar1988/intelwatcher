@@ -46,8 +46,11 @@ def mechanize_cookie(config, log):
         tries += 1
         log.info(f"Trying to log into Intel: Try {tries}/5")
         browser.select_form(nr=0)
-        browser.form['email'] = config.ingress_user
-        browser.form['pass'] = config.ingress_password
+        try:
+            browser.form['email'] = config.ingress_user
+            browser.form['pass'] = config.ingress_password
+        except:
+            pass
         response = browser.submit()
         time.sleep(2)
         log.debug(browser.geturl())
