@@ -11,10 +11,10 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
 from rich import print
 
-from util.ingress import IntelMap, MapTiles
-from util.config import Config
-from util.queries import Queries
-from util.get_cookie import mechanize_cookie, selenium_cookie
+from intelwatcher.ingress import IntelMap, MapTiles
+from intelwatcher.config import Config
+from intelwatcher.queries import Queries
+from intelwatcher.get_cookie import mechanize_cookie, selenium_cookie
 
 def maybe_byte(name):
     try:
