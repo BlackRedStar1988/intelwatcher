@@ -16,11 +16,13 @@ from intelwatcher.config import Config
 from intelwatcher.queries import Queries
 from intelwatcher.get_cookie import mechanize_cookie, selenium_cookie
 
+
 def maybe_byte(name):
     try:
         return name.decode()
-    except:
+    except Exception:
         return name
+
 
 def update_wp(wp_type, points):
     updated = 0
@@ -42,6 +44,7 @@ def update_wp(wp_type, points):
     log.info(f"Updated {updated} {wp_type}s")
     log.info("")
 
+
 def scrape_tile(tile, scraper, progress, task, tiles_data):
     iitc_xtile = int(tile[0])
     iitc_ytile = int(tile[1])
@@ -57,6 +60,7 @@ def scrape_tile(tile, scraper, progress, task, tiles_data):
         except Exception as e:
             tries += 1
             print(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
+
 
 def scrape_all():
     bbox = list(config.bbox.split(';'))
@@ -83,6 +87,7 @@ def scrape_all():
                     executor.submit(scrape_tile, tile, scraper, progress, task, tiles_data)
 
         try:
+            now = int(time.time())
             for tile_data in tiles_data:
                 for value in tile_data.values():
                     for entry in value["gameEntities"]:
@@ -92,32 +97,22 @@ def scrape_all():
                             p_lon = entry[2][3]/1e6
                             p_name = maybe_byte(entry[2][8])
                             p_img = maybe_byte(entry[2][7])
-                            now = int(time.time())
                             portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
         except Exception as e:
             log.info("Something went wrong while parsing Portals")
             log.exception(e)
 
-        log.info(f"Found {len(portals)} Portals")
+        log.success(f"Updating {len(portals)} Portals")
         queries = Queries(config)
-        updated_portals = 0
-        with Progress() as progress:
-            task = progress.add_task("Updating DB", total=len(portals))
-
-            try:
-                queries.update_portal(portals)
-                updated_portals += 1
-            except Exception as e:
-                log.error(f"Failed executing Portal Inserts")
-                log.exception(e)
-            progress.update(task, advance=1)
+        try:
+            queries.update_portal(portals)
+        except Exception as e:
+            log.error(f"Failed executing Portal Inserts")
+            log.exception(e)
 
         queries.close()
-        if updated_portals == len(portals):
-            log.success("Put all Portals in your DB.")
-        else:
-            log.critical(f"Only put {updated_portals} in your DB")
         time.sleep(config.areasleep)
+
 
 def send_cookie_webhook(text):
     if config.cookie_wh:
@@ -132,6 +127,7 @@ def send_cookie_webhook(text):
         }
         result = requests.post(config.wh_url, json=data)
         log.info(f"Webhook response: {result.status_code}")
+
 
 if __name__ == "__main__":
     portal_name = 8
