@@ -50,7 +50,7 @@ class Tile:
 
     @property
     def failed(self):
-        return self.tries > 7
+        return self.tries > 10
 
 
 def get_tiles(bbox):
