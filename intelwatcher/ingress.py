@@ -133,7 +133,7 @@ class IntelMap:
 
         to_scrape = []
         for tile in tiles:
-            if tile.tries < 4:
+            if tile.tries < 6:
                 to_scrape.append(tile.name)
                 tile.tries += 1
         data["tileKeys"] = to_scrape
