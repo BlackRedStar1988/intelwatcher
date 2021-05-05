@@ -2,18 +2,16 @@ import argparse
 import sys
 import requests
 import time
-import timeit
 import logging
 import coloredlogs
 
 from concurrent.futures.thread import ThreadPoolExecutor
-from rich.progress import Progress
-from rich import print
 
 from intelwatcher.ingress import IntelMap, MapTiles, get_tiles
 from intelwatcher.config import Config
 from intelwatcher.queries import Queries
 from intelwatcher.get_cookie import mechanize_cookie, selenium_cookie
+from intelwatcher.stopwatch import Stopwatch
 
 
 def maybe_byte(name):
@@ -48,21 +46,20 @@ def scrape_tile(part_tiles, scraper, portals):
     scraper.get_tiles(part_tiles, portals)
 
 
-def scrape_all():
+def scrape_all(time, n):
     bbox = list(config.bbox.split(';'))
     tiles = []
     for cord in bbox:
         bbox_cord = list(map(float, cord.split(',')))
         tiles += get_tiles(bbox_cord)
 
-    n = 15
     tiles_to_scrape = [tiles[i * n:(i + 1) * n] for i in range((len(tiles) + n - 1) // n)]
     portals = []
 
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         for part_tiles in tiles_to_scrape:
             executor.submit(scrape_tile, part_tiles, scraper, portals)
-
+    log.info(f"Done scraping in {time.pause()}s - Writing portals to DB")
 
     queries = Queries(config)
     try:
@@ -71,7 +68,7 @@ def scrape_all():
         log.error(f"Failed executing Portal Inserts")
         log.exception(e)
 
-    log.success(f"Updated {len(portals)} Portals")
+    log.info(f"Updated {len(portals)} Portals")
 
     queries.close()
 
@@ -101,6 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", default="config.ini", help="Config file to use")
     parser.add_argument("-w", "--workers", default=0, help="Workers")
     parser.add_argument("-d", "--debug", action='store_true', help="Run the script in debug mode")
+    parser.add_argument("-t", "--tiles", default=15, help="How many tiles to scrape per worker")
     args = parser.parse_args()
 
     # LOG STUFF
@@ -168,7 +166,12 @@ if __name__ == "__main__":
     if int(args.workers) > 0:
         config.workers = int(args.workers)
 
-    start = timeit.default_timer()
-    scrape_all()
-    stop = timeit.default_timer()
-    log.success(f"Total runtime: {round(stop - start, 1)} seconds")
+    if int(args.tiles) > 25:
+        log.error("Please use a -t count below 25")
+        sys.exit(1)
+
+    #start = timeit.default_timer()
+    time = Stopwatch()
+    scrape_all(time, int(args.tiles))
+    #stop = timeit.default_timer()
+    log.success(f"Total runtime: {time.pause()} seconds")
