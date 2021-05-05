@@ -50,7 +50,10 @@ def mechanize_cookie(config, log):
             browser.form['email'] = config.ingress_user
             browser.form['pass'] = config.ingress_password
         except:
-            pass
+            try:
+                browser.click(name="submit[Yes]")
+            except:
+                pass
         response = browser.submit()
         time.sleep(2)
         log.debug(browser.geturl())
