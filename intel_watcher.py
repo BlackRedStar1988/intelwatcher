@@ -102,13 +102,14 @@ def scrape_all():
             log.info("Something went wrong while parsing Portals")
             log.exception(e)
 
-        log.success(f"Updating {len(portals)} Portals")
         queries = Queries(config)
         try:
             queries.update_portal(portals)
         except Exception as e:
             log.error(f"Failed executing Portal Inserts")
             log.exception(e)
+
+        log.success(f"Updated {len(portals)} Portals")
 
         queries.close()
         time.sleep(config.areasleep)
