@@ -153,20 +153,22 @@ class IntelMap:
             errors = []
             for tile_name, payload in result.items():
                 tile = tile_map[tile_name]
+
                 if "error" in payload.keys():
                     errors.append(tile)
                 else:
                     entities = payload["gameEntities"]
                     if not entities:
                         errors.append(tile)
-                    for entry in entities:
-                        if entry[2][0] == "p":
-                            p_id = entry[0]
-                            p_lat = entry[2][2] / 1e6
-                            p_lon = entry[2][3] / 1e6
-                            p_name = maybe_byte(entry[2][8])
-                            p_img = maybe_byte(entry[2][7])
-                            portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+                    else:
+                        for entry in entities:
+                            if entry[2][0] == "p":
+                                p_id = entry[0]
+                                p_lat = entry[2][2] / 1e6
+                                p_lon = entry[2][3] / 1e6
+                                p_name = maybe_byte(entry[2][8])
+                                p_img = maybe_byte(entry[2][7])
+                                portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
         self.scrape_tiles(errors, portals)
 
     def get_portal_details(self, guid):

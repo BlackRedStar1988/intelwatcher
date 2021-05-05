@@ -36,10 +36,6 @@ def update_wp(wp_type, points):
     log.info("")
 
 
-def scrape_tile(part_tiles, scraper, portals):
-    scraper.scrape_tiles(part_tiles, portals)
-
-
 def scrape_all(time, n):
     bbox = list(config.bbox.split(';'))
     tiles = []
@@ -53,12 +49,11 @@ def scrape_all(time, n):
     tracemalloc.start()
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         for part_tiles in tiles_to_scrape:
-            executor.submit(scrape_tile, part_tiles, scraper, portals)
+            executor.submit(scraper.scrape_tiles, part_tiles, portals)
     log.info(f"Done scraping {len(tiles)} tiles in {time.pause()}s - Writing portals to DB")
 
     current, peak = tracemalloc.get_traced_memory()
-    current, peak = round(current, 2), round(peak, 2)
-    log.info(f"Current memory usage is {current / 10 ** 6}MB; Peak was {peak / 10 ** 6}MB")
+    log.info(f"Current memory usage is {round(current / 10 ** 6, 2)}MB; Peak was {round(peak / 10 ** 6, 2)}MB")
     tracemalloc.stop()
 
     failed_tiles = len([t for t in tiles if t.failed])
