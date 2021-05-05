@@ -1,8 +1,8 @@
 import sys
 import os
 import time
-import logging
 import glob
+
 
 def _write_cookie(log, cookies):
     final_cookie = ''.join("{}={}; ".format(k, v) for k, v in cookies.items())
@@ -31,11 +31,15 @@ def mechanize_cookie(config, log):
     browser.set_handle_robots(False)
     cookies = mechanize.CookieJar()
     browser.set_cookiejar(cookies)
-    browser.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.7 (KHTML, like Gecko) Chrome/7.0.517.41 Safari/534.7')]
+    browser.addheaders = [
+        ('User-agent',
+         'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.7 (KHTML, like Gecko) Chrome/7.0.517.41 Safari/534.7')
+    ]
     browser.set_handle_refresh(False)
     log.info("Everything set - Let's go")
 
-    url = 'https://www.facebook.com/v3.2/dialog/oauth?client_id=449856365443419&redirect_uri=https%3A%2F%2Fintel.ingress.com%2F'
+    url = ('https://www.facebook.com/v3.2/dialog/'
+           'oauth?client_id=449856365443419&redirect_uri=https%3A%2F%2Fintel.ingress.com%2F')
     browser.open(url)
     log.info("Opened Facebook Login Page")
     log.debug(browser.geturl())
@@ -45,15 +49,23 @@ def mechanize_cookie(config, log):
     while "https://intel.ingress.com/" not in browser.geturl() and tries < 5:
         tries += 1
         log.info(f"Trying to log into Intel: Attempt {tries}/5")
-        browser.select_form(nr=0)
+        try:
+            browser.select_form(nr=0)
+        except:
+            pass
         try:
             browser.form['email'] = config.ingress_user
             browser.form['pass'] = config.ingress_password
         except:
             try:
-                browser.click(name="submit[Yes]")
-            except:
-                pass
+                form = browser.global_form()
+                control = form.find_control(name="submit[Yes]")
+                test = control._click()
+                #print(test)
+                #test = browser.click(name="submit[Yes]", kind=None)
+                #print(test)
+            except Exception as e:
+                log.exception(e)
         response = browser.submit()
         time.sleep(2)
         log.debug(browser.geturl())
@@ -93,7 +105,8 @@ def selenium_cookie(config, log):
     for f in files:
         os.remove(f)
 
-    user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
+    user_agent = ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)'
+                  ' Chrome/60.0.3112.50 Safari/537.36')
 
     if config.webdriver == 'firefox':
         options = webdriver.FirefoxOptions()
@@ -151,7 +164,8 @@ def selenium_cookie(config, log):
             if config.webdriver == 'firefox':
                 # to make element visible:
                 driver.execute_script(
-                    'arguments[0].style = ""; arguments[0].style.display = "block"; arguments[0].style.visibility = "visible";',
+                    ('arguments[0].style = ""; arguments[0].style.display = "block"; '
+                     'arguments[0].style.visibility = "visible";'),
                     pw_element
                 )
                 time.sleep(1)
@@ -171,7 +185,10 @@ def selenium_cookie(config, log):
 
         log.info('Login to Intel Ingress')
         try:
-            driver.get('https://accounts.google.com/o/oauth2/v2/auth?client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&redirect_uri=https://intel.ingress.com/&prompt=consent%20select_account&state=GOOGLE&scope=email%20profile&response_type=code')
+            driver.get(('https://accounts.google.com/o/oauth2/v2/auth?'
+                        'client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&'
+                        'redirect_uri=https://intel.ingress.com/&prompt=consent%20select_account&state=GOOGLE'
+                        '&scope=email%20profile&response_type=code'))
             driver.find_element(By.ID, 'profileIdentifier').click()
             driver.implicitly_wait(10)
         except NoSuchElementException:
@@ -182,7 +199,10 @@ def selenium_cookie(config, log):
         final_cookie = _write_cookie(log, {c['name']: c['value'] for c in driver.get_cookies()})
     elif config.ingress_login_type == 'facebook':
         driver.get('http://intel.ingress.com')
-        driver.find_element(By.XPATH, '//div[@id="dashboard_container"]//a[@class="button_link" and contains(text(), "Facebook")]').click()
+        driver.find_element(
+            By.XPATH,
+            '//div[@id="dashboard_container"]//a[@class="button_link" and contains(text(), "Facebook")]'
+        ).click()
         driver.implicitly_wait(10)
 
         log.info('Enter username...')

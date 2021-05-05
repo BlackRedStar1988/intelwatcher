@@ -1,13 +1,9 @@
 #! /usr/local/bin/python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import requests
-import re, sys
-import lxml
+import re
 import json
-from datetime import datetime
 from time import time
-import getpass
-from bs4 import BeautifulSoup as bs
 from requests.utils import dict_from_cookiejar, cookiejar_from_dict
 import math
 __AUTHOR__ = 'lc4t0.0@gmail.com'
@@ -24,18 +20,20 @@ def get_tiles_per_edge(zoom):
 
 
 def lng2tile(lng, tpe): # w
-  return int((lng + 180) / 360 * tpe);
+    return int((lng + 180) / 360 * tpe);
+
 
 def lat2tile(lat, tpe): # j
     return int((1 - math.log(math.tan(lat * math.pi / 180) + 1 / math.cos(lat * math.pi / 180)) / math.pi) / 2 * tpe)
 
+
 def tile2lng(x, tpe):
     return x / tpe * 360 - 180;
+
 
 def tile2lat(y, tpe):
     n = math.pi - 2 * math.pi * y / tpe;
     return 180 / math.pi * math.atan(0.5 * (math.exp(n) - math.exp(-n)));
-    
     
 
 class MapTiles:
@@ -60,6 +58,7 @@ class MapTiles:
 
         return self.tiles
 
+
 class IntelMap:
     r = requests.Session()
     headers = {
@@ -69,7 +68,8 @@ class IntelMap:
         'content-type': 'application/json; charset=UTF-8',
         'origin': 'https://intel.ingress.com',
         'referer': 'https://intel.ingress.com/intel',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36',
+        'user-agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) '
+                       'Chrome/55.0.2883.95 Safari/537.36'),
     }
     data_base = {
         'v': '',
@@ -78,6 +78,7 @@ class IntelMap:
         # 'http': 'socks5://127.0.0.1:1080',
         # 'https': 'socks5://127.0.0.1:1080',
     }
+
     def __init__(self, cookie):
         self.isCookieOk = False
         self.login(cookie)
@@ -96,10 +97,8 @@ class IntelMap:
         except IndexError:
             self.isCookieOk = False
 
-
     def getCookieStatus(self):
         return self.isCookieOk
-
 
     def get_game_score(self):
         data = self.data_base
@@ -125,14 +124,15 @@ class IntelMap:
         data = self.data_base
         data.update(_)
         data = json.dumps(data)
-        _ = self.r.post('https://intel.ingress.com/r/getPortalDetails', data=data, headers=self.headers, proxies=self.proxy)
+        _ = self.r.post('https://intel.ingress.com/r/getPortalDetails', data=data, headers=self.headers,
+                        proxies=self.proxy)
         try:
             return json.loads(_.text)
         except Exception as e:
             return None
-         
 
-    def get_plexts(self, min_lng, max_lng, min_lat, max_lat, tab='all', maxTimestampMs=-1, minTimestampMs=0, ascendingTimestampOrder=True):
+    def get_plexts(self, min_lng, max_lng, min_lat, max_lat, tab='all', maxTimestampMs=-1, minTimestampMs=0,
+                   ascendingTimestampOrder=True):
         if minTimestampMs == 0:
             minTimestampMs = int(time()*1000)
         data = self.data_base
@@ -169,6 +169,7 @@ class IntelMap:
             'lngE6': lng,
         })
         data = json.dumps(data)
-        _ = self.r.post('https://intel.ingress.com/r/getRegionScoreDetails', headers=self.headers, data=data, proxies=self.proxy)
+        _ = self.r.post('https://intel.ingress.com/r/getRegionScoreDetails', headers=self.headers, data=data,
+                        proxies=self.proxy)
         return json.loads(_.text)
 

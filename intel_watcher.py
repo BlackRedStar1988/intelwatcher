@@ -3,7 +3,6 @@ import sys
 import requests
 import time
 import timeit
-import json
 import logging
 import coloredlogs
 
@@ -119,7 +118,8 @@ def send_cookie_webhook(text):
     if config.cookie_wh:
         data = {
             "username": "Cookie Alarm",
-            "avatar_url": "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/apple/237/cookie_1f36a.png",
+            "avatar_url": ("https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/"
+                           "apple/237/cookie_1f36a.png"),
             "content": config.cookie_text,
             "embeds": [{
                 "description": f":cookie: {text}",
@@ -179,9 +179,11 @@ if __name__ == "__main__":
                         config.cookie = selenium_cookie(config, log)
                         cookie_get_success = True
                 except Exception as e:
-                    log.error("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
+                    log.error(("Error while trying to get a Cookie - sending a webhook, "
+                               "sleeping 1 hour and trying again"))
                     log.exception(e)
-                    send_cookie_webhook("Got an error while trying to get a new cookie - Please check logs. Retrying in 1 hour.")
+                    send_cookie_webhook(("Got an error while trying to get a new cookie - Please check logs. "
+                                         "Retrying in 1 hour."))
                     time.sleep(3600)
             scraper.login(config.cookie)
         else:
