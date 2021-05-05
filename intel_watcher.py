@@ -44,75 +44,7 @@ def update_wp(wp_type, points):
     log.info("")
 
 
-def scrape_tile(tile, scraper, progress, task, tiles_data):
-    iitc_xtile = int(tile[0])
-    iitc_ytile = int(tile[1])
-    iitc_tile_name  = f"15_{iitc_xtile}_{iitc_ytile}_0_8_100"
-
-    tries = 0
-    progress.update(task, advance=1)
-    while tries < 3:
-        try:
-            t_data = scraper.get_entities([iitc_tile_name])
-            tiles_data.append(t_data["result"]["map"])
-            tries = 3
-        except Exception as e:
-            tries += 1
-            print(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
-
-
-def scrape_all2():
-    bbox = list(config.bbox.split(';'))
-    tiles_list = []
-    for cord in bbox:
-        bbox_cord = list(map(float, cord.split(',')))
-        tiles_list.append(get_tiles(bbox_cord))
-
-    for index, tiles in enumerate(tiles_list):
-        area = index + 1
-        total_tiles = len(tiles)
-        portals = []
-        tiles_data = []
-
-        log.info("")
-        log.warning(f"Getting area #{area}")
-        log.info(f"Total tiles to scrape: {total_tiles}")
-        with Progress() as progress:
-            task = progress.add_task("Scraping Portals", total=total_tiles)
-            with ThreadPoolExecutor(max_workers=config.workers) as executor: 
-                for tile in tiles:
-                    executor.submit(scrape_tile, tile, scraper, progress, task, tiles_data)
-
-        try:
-            now = int(time.time())
-            for tile_data in tiles_data:
-                for value in tile_data.values():
-                    for entry in value["gameEntities"]:
-                        if entry[2][0] == "p":
-                            p_id = entry[0]
-                            p_lat = entry[2][2]/1e6
-                            p_lon = entry[2][3]/1e6
-                            p_name = maybe_byte(entry[2][8])
-                            p_img = maybe_byte(entry[2][7])
-                            portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
-        except Exception as e:
-            log.info("Something went wrong while parsing Portals")
-            log.exception(e)
-
-        queries = Queries(config)
-        try:
-            queries.update_portal(portals)
-        except Exception as e:
-            log.error(f"Failed executing Portal Inserts")
-            log.exception(e)
-
-        log.success(f"Updated {len(portals)} Portals")
-
-        queries.close()
-        time.sleep(config.areasleep)
-
-
-def scrape_tile_test(part_tiles, scraper, portals):
+def scrape_tile(part_tiles, scraper, portals):
     scraper.get_tiles(part_tiles, portals)
 
 
@@ -129,7 +61,7 @@ def scrape_all():
 
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         for part_tiles in tiles_to_scrape:
-            executor.submit(scrape_tile_test, part_tiles, scraper, portals)
+            executor.submit(scrape_tile, part_tiles, scraper, portals)
 
 
     queries = Queries(config)
