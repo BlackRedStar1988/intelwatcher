@@ -48,6 +48,10 @@ class Tile:
         self.name = f"15_{x}_{y}_0_8_100"
         self.tries = 0
 
+    @property
+    def failed(self):
+        return self.tries > 5
+
 
 def get_tiles(bbox):
     lower_lon, lower_lat, upper_lon, upper_lat = bbox
@@ -133,7 +137,7 @@ class IntelMap:
 
         to_scrape = []
         for tile in tiles:
-            if tile.tries < 6:
+            if not tile.failed:
                 to_scrape.append(tile.name)
                 tile.tries += 1
         data["tileKeys"] = to_scrape
