@@ -50,7 +50,7 @@ class Tile:
 
     @property
     def failed(self):
-        return self.tries > 10
+        return self.tries > 7
 
 
 def get_tiles(bbox):
@@ -147,20 +147,23 @@ class IntelMap:
                              proxies=self.proxy)
         result = result.json()["result"]["map"]
 
-        errors = []
-        for tile_name, payload in result.items():
-            tile = tile_map[tile_name]
-            if "error" in payload.keys():
-                errors.append(tile)
-            else:
-                for entry in payload["gameEntities"]:
-                    if entry[2][0] == "p":
-                        p_id = entry[0]
-                        p_lat = entry[2][2] / 1e6
-                        p_lon = entry[2][3] / 1e6
-                        p_name = maybe_byte(entry[2][8])
-                        p_img = maybe_byte(entry[2][7])
-                        portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+        if not result:
+            errors = tiles
+        else:
+            errors = []
+            for tile_name, payload in result.items():
+                tile = tile_map[tile_name]
+                if "error" in payload.keys():
+                    errors.append(tile)
+                else:
+                    for entry in payload["gameEntities"]:
+                        if entry[2][0] == "p":
+                            p_id = entry[0]
+                            p_lat = entry[2][2] / 1e6
+                            p_lon = entry[2][3] / 1e6
+                            p_name = maybe_byte(entry[2][8])
+                            p_img = maybe_byte(entry[2][7])
+                            portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
         portals += self.scrape_tiles(errors, portals)
 
         return portals
