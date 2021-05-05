@@ -46,6 +46,7 @@ def maybe_byte(name):
 class Tile:
     def __init__(self, x, y):
         self.name = f"15_{x}_{y}_0_8_100"
+        self.tries = 0
 
 
 def get_tiles(bbox):
@@ -129,7 +130,13 @@ class IntelMap:
 
         tile_map = {t.name: t for t in tiles}
         data = self.data_base.copy()
-        data["tileKeys"] = [t.name for t in tiles]
+
+        to_scrape = []
+        for tile in tiles:
+            if tile.tries < 4:
+                to_scrape.append(tile.name)
+                tile.tries += 1
+        data["tileKeys"] = to_scrape
 
         now = int(time())
         result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
