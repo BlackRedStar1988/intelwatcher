@@ -130,7 +130,7 @@ class IntelMap:
 
     def scrape_tiles(self, tiles, portals):
         if tiles == []:
-            return
+            return portals
 
         tile_map = {t.name: t for t in tiles}
         data = self.data_base.copy()
