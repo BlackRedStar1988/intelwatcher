@@ -7,18 +7,11 @@ import coloredlogs
 
 from concurrent.futures.thread import ThreadPoolExecutor
 
-from intelwatcher.ingress import IntelMap, MapTiles, get_tiles
+from intelwatcher.ingress import IntelMap, get_tiles, maybe_byte
 from intelwatcher.config import Config
 from intelwatcher.queries import Queries
 from intelwatcher.get_cookie import mechanize_cookie, selenium_cookie
 from intelwatcher.stopwatch import Stopwatch
-
-
-def maybe_byte(name):
-    try:
-        return name.decode()
-    except Exception:
-        return name
 
 
 def update_wp(wp_type, points):
@@ -43,7 +36,7 @@ def update_wp(wp_type, points):
 
 
 def scrape_tile(part_tiles, scraper, portals):
-    scraper.get_tiles(part_tiles, portals)
+    scraper.scrape_tiles(part_tiles, portals)
 
 
 def scrape_all(time, n):
@@ -59,7 +52,7 @@ def scrape_all(time, n):
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         for part_tiles in tiles_to_scrape:
             executor.submit(scrape_tile, part_tiles, scraper, portals)
-    log.info(f"Done scraping in {time.pause()}s - Writing portals to DB")
+    log.info(f"Done scraping {len(tiles)} tiles in {time.pause()}s - Writing portals to DB")
 
     queries = Queries(config)
     try:

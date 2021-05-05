@@ -70,12 +70,12 @@ Now proceed as usual: `pip3 install -r requirements.txt`, fill in the config and
 - `python3 intel_watcher.py` to scrape the area
 - `python3 intel_watcher.py -u` to update Gyms and Stops with missing title and photo
 
-### Threading
+### Faster runtimes
 
-Intel Watcher uses threading for faster runtimes. So, instead of scraping every page one by one, it can scrape multiple pages at once. Please note the following:
+Intel Watcher works by requesting X map tiles from the IntelMap. You can set X using the `-t` argument. Default is 15, max is 25.
 
-- "Workers" defines the amount of pages to be scraped simultaneously. The more workers you set, the faster the script will scrape
-- You can set the amount of workers in the config. I recommend to just set a few, since the script is just running in the background
-- When running the script manually, you can use the -w argument to set more workers. E.g. `python3 intel_watcher.py -w 20` would start the script with 20 workers
-- Attention: It's very likely that you'll be banned faster when using lots of workers, so be responsible with them
-- Don't overdo the workers. I scrape 306 tiles and 20 workers are faster than 300 (and even 30) for me - find your sweet spot
+The requests are happening within threads. You can set the amount of threads running simultaneously (= workers) in the config and with the `-w` argument. 
+
+I recommend only setting a few workers in your config, since the script will be running in the background anyway and use less resources that way.
+
+When running the script manually, a command similiar to this will produce the fastest runtime possible: `python intel_watcher.py -w 1000 -t 20`. You can play around with the numbers and see what works best for you.

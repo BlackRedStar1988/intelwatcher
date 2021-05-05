@@ -34,28 +34,6 @@ def tile2lng(x, tpe):
 def tile2lat(y, tpe):
     n = math.pi - 2 * math.pi * y / tpe;
     return 180 / math.pi * math.atan(0.5 * (math.exp(n) - math.exp(-n)));
-    
-
-class MapTiles:
-    def __init__(self, bbox):
-        self.LowerLng = bbox[0]
-        self.LowerLat = bbox[1]
-        self.UpperLng = bbox[2]
-        self.UpperLat = bbox[3]
-        self.zpe = get_tiles_per_edge(15)
-        self.tiles = []
-        
-    def getTiles(self):        
-        Lx = lng2tile(self.LowerLng, self.zpe)
-        Ly = lat2tile(self.LowerLat, self.zpe)
-        Ux = lng2tile(self.UpperLng, self.zpe)
-        Uy = lat2tile(self.UpperLat, self.zpe)
-
-        for x in range(Lx, Ux+1):
-            for y in range(Uy, Ly+1):
-                self.tiles.append([x,y])
-
-        return self.tiles
 
 
 def maybe_byte(name):
@@ -68,19 +46,6 @@ def maybe_byte(name):
 class Tile:
     def __init__(self, x, y):
         self.name = f"15_{x}_{y}_0_8_100"
-
-    def convert_entities(self, entities):
-        now = int(time())
-        portals = []
-        for entry in entities:
-            if entry[2][0] == "p":
-                p_id = entry[0]
-                p_lat = entry[2][2] / 1e6
-                p_lon = entry[2][3] / 1e6
-                p_name = maybe_byte(entry[2][8])
-                p_img = maybe_byte(entry[2][7])
-                portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
-        return portals
 
 
 def get_tiles(bbox):
@@ -158,15 +123,15 @@ class IntelMap:
         _ = self.r.post('https://intel.ingress.com/r/getEntities', data=data, headers=self.headers, proxies=self.proxy)
         return json.loads(_.text)
 
-    def get_tiles(self, tiles, portals):
+    def scrape_tiles(self, tiles, portals):
         if tiles == []:
             return
 
         tile_map = {t.name: t for t in tiles}
         data = self.data_base.copy()
-
         data["tileKeys"] = [t.name for t in tiles]
 
+        now = int(time())
         result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
                              proxies=self.proxy)
         result = result.json()["result"]["map"]
@@ -177,8 +142,16 @@ class IntelMap:
             if "error" in payload.keys():
                 errors.append(tile)
             else:
-                portals += tile.convert_entities(payload["gameEntities"])
-        portals += self.get_tiles(errors, portals)
+                portals = []
+                for entry in payload["gameEntities"]:
+                    if entry[2][0] == "p":
+                        p_id = entry[0]
+                        p_lat = entry[2][2] / 1e6
+                        p_lon = entry[2][3] / 1e6
+                        p_name = maybe_byte(entry[2][8])
+                        p_img = maybe_byte(entry[2][7])
+                        portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+        portals += self.scrape_tiles(errors, portals)
 
         return portals
 
