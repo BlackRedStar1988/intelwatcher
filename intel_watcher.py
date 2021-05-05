@@ -10,7 +10,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
 from rich import print
 
-from intelwatcher.ingress import IntelMap, MapTiles
+from intelwatcher.ingress import IntelMap, MapTiles, get_tiles
 from intelwatcher.config import Config
 from intelwatcher.queries import Queries
 from intelwatcher.get_cookie import mechanize_cookie, selenium_cookie
@@ -61,14 +61,12 @@ def scrape_tile(tile, scraper, progress, task, tiles_data):
             print(f"[#676b70]Tile {iitc_tile_name} didn't load correctly - Retry {tries}/3 ({e})")
 
 
-def scrape_all():
+def scrape_all2():
     bbox = list(config.bbox.split(';'))
     tiles_list = []
     for cord in bbox:
         bbox_cord = list(map(float, cord.split(',')))
-        bbox_cord.append(15)
-        mTiles = MapTiles(bbox_cord)
-        tiles_list.append(mTiles.getTiles())
+        tiles_list.append(get_tiles(bbox_cord))
 
     for index, tiles in enumerate(tiles_list):
         area = index + 1
@@ -112,6 +110,38 @@ def scrape_all():
 
         queries.close()
         time.sleep(config.areasleep)
+
+
+def scrape_tile_test(part_tiles, scraper, portals):
+    scraper.get_tiles(part_tiles, portals)
+
+
+def scrape_all():
+    bbox = list(config.bbox.split(';'))
+    tiles = []
+    for cord in bbox:
+        bbox_cord = list(map(float, cord.split(',')))
+        tiles += get_tiles(bbox_cord)
+
+    n = 15
+    tiles_to_scrape = [tiles[i * n:(i + 1) * n] for i in range((len(tiles) + n - 1) // n)]
+    portals = []
+
+    with ThreadPoolExecutor(max_workers=config.workers) as executor:
+        for part_tiles in tiles_to_scrape:
+            executor.submit(scrape_tile_test, part_tiles, scraper, portals)
+
+
+    queries = Queries(config)
+    try:
+        queries.update_portal(portals)
+    except Exception as e:
+        log.error(f"Failed executing Portal Inserts")
+        log.exception(e)
+
+    log.success(f"Updated {len(portals)} Portals")
+
+    queries.close()
 
 
 def send_cookie_webhook(text):

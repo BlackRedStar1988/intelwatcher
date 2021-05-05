@@ -6,7 +6,7 @@ import json
 from time import time
 from requests.utils import dict_from_cookiejar, cookiejar_from_dict
 import math
-__AUTHOR__ = 'lc4t0.0@gmail.com'
+__AUTHOR__ = 'lc4t0.0@gmail.com and ccev'
 
 
 def get_tiles_per_edge(zoom):
@@ -37,7 +37,6 @@ def tile2lat(y, tpe):
     
 
 class MapTiles:
-
     def __init__(self, bbox):
         self.LowerLng = bbox[0]
         self.LowerLat = bbox[1]
@@ -57,6 +56,48 @@ class MapTiles:
                 self.tiles.append([x,y])
 
         return self.tiles
+
+
+def maybe_byte(name):
+    try:
+        return name.decode()
+    except Exception:
+        return name
+
+
+class Tile:
+    def __init__(self, x, y):
+        self.name = f"15_{x}_{y}_0_8_100"
+
+    def convert_entities(self, entities):
+        now = int(time())
+        portals = []
+        for entry in entities:
+            if entry[2][0] == "p":
+                p_id = entry[0]
+                p_lat = entry[2][2] / 1e6
+                p_lon = entry[2][3] / 1e6
+                p_name = maybe_byte(entry[2][8])
+                p_img = maybe_byte(entry[2][7])
+                portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+        return portals
+
+
+def get_tiles(bbox):
+    lower_lon, lower_lat, upper_lon, upper_lat = bbox
+    zpe = get_tiles_per_edge(15)
+    tiles = []
+
+    lx = lng2tile(lower_lon, zpe)
+    ly = lat2tile(lower_lat, zpe)
+    ux = lng2tile(upper_lon, zpe)
+    uy = lat2tile(upper_lat, zpe)
+
+    for x in range(lx, ux + 1):
+        for y in range(uy, ly + 1):
+            tiles.append(Tile(x, y))
+
+    return tiles
 
 
 class IntelMap:
@@ -116,6 +157,30 @@ class IntelMap:
         data = json.dumps(data)
         _ = self.r.post('https://intel.ingress.com/r/getEntities', data=data, headers=self.headers, proxies=self.proxy)
         return json.loads(_.text)
+
+    def get_tiles(self, tiles, portals):
+        if tiles == []:
+            return
+
+        tile_map = {t.name: t for t in tiles}
+        data = self.data_base.copy()
+
+        data["tileKeys"] = [t.name for t in tiles]
+
+        result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
+                             proxies=self.proxy)
+        result = result.json()["result"]["map"]
+
+        errors = []
+        for tile_name, payload in result.items():
+            tile = tile_map[tile_name]
+            if "error" in payload.keys():
+                errors.append(tile)
+            else:
+                portals += tile.convert_entities(payload["gameEntities"])
+        portals += self.get_tiles(errors, portals)
+
+        return portals
 
     def get_portal_details(self, guid):
         _ = {
