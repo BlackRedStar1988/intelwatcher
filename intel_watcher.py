@@ -93,7 +93,7 @@ def scrape_all():
                             p_name = maybe_byte(entry[2][8])
                             p_img = maybe_byte(entry[2][7])
                             now = int(time.time())
-                            portals.append((p_id, p_lat, p_lon, p_name, p_img, now, now))
+                            portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
         except Exception as e:
             log.info("Something went wrong while parsing Portals")
             log.exception(e)
