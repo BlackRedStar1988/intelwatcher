@@ -4,6 +4,7 @@ import requests
 import time
 import logging
 import coloredlogs
+import tracemalloc
 
 from concurrent.futures.thread import ThreadPoolExecutor
 
@@ -49,10 +50,16 @@ def scrape_all(time, n):
     tiles_to_scrape = [tiles[i * n:(i + 1) * n] for i in range((len(tiles) + n - 1) // n)]
     portals = []
 
+    tracemalloc.start()
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         for part_tiles in tiles_to_scrape:
             executor.submit(scrape_tile, part_tiles, scraper, portals)
     log.info(f"Done scraping {len(tiles)} tiles in {time.pause()}s - Writing portals to DB")
+
+    current, peak = tracemalloc.get_traced_memory()
+    current, peak = round(current, 2), round(peak, 2)
+    log.info(f"Current memory usage is {current / 10 ** 6}MB; Peak was {peak / 10 ** 6}MB")
+    tracemalloc.stop()
 
     failed_tiles = len([t for t in tiles if t.failed])
     if failed_tiles > 0:
