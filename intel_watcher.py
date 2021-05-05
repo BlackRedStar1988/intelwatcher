@@ -92,7 +92,8 @@ def scrape_all():
                             p_lon = entry[2][3]/1e6
                             p_name = maybe_byte(entry[2][8])
                             p_img = maybe_byte(entry[2][7])
-                            portals.append([p_id, p_lat, p_lon, p_name, p_img])
+                            now = int(time.time())
+                            portals.append((p_id, p_lat, p_lon, p_name, p_img, now, now))
         except Exception as e:
             log.info("Something went wrong while parsing Portals")
             log.exception(e)
@@ -102,15 +103,14 @@ def scrape_all():
         updated_portals = 0
         with Progress() as progress:
             task = progress.add_task("Updating DB", total=len(portals))
-            for p_id, lat, lon, p_name, p_img in portals:
-                updated_ts = int(time.time())
-                try:
-                    queries.update_portal(p_id, p_name, p_img, lat, lon, updated_ts)
-                    updated_portals += 1
-                except Exception as e:
-                    log.error(f"Failed putting Portal {p_name} ({p_id}) in your DB")
-                    log.exception(e)
-                progress.update(task, advance=1)
+
+            try:
+                queries.update_portal(portals)
+                updated_portals += 1
+            except Exception as e:
+                log.error(f"Failed executing Portal Inserts")
+                log.exception(e)
+            progress.update(task, advance=1)
 
         queries.close()
         if updated_portals == len(portals):
