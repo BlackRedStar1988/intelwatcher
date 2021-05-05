@@ -78,4 +78,4 @@ The requests are happening within threads. You can set the amount of threads run
 
 I recommend only setting a few workers in your config, since the script will be running in the background anyway and use less resources that way.
 
-When running the script manually, a command similiar to this will produce the fastest runtime possible: `python intel_watcher.py -w 1000 -t 20`. You can play around with the numbers and see what works best for you.
+When running the script manually, a command similiar to this will produce the fastest runtime possible: `python intel_watcher.py -w 50 -t 20`. You can play around with the numbers and see what works best for you.

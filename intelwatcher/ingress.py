@@ -142,7 +142,6 @@ class IntelMap:
             if "error" in payload.keys():
                 errors.append(tile)
             else:
-                portals = []
                 for entry in payload["gameEntities"]:
                     if entry[2][0] == "p":
                         p_id = entry[0]
