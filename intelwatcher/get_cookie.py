@@ -44,7 +44,7 @@ def mechanize_cookie(config, log):
     tries = 0
     while "https://intel.ingress.com/" not in browser.geturl() and tries < 5:
         tries += 1
-        log.info(f"Trying to log into Intel: Try {tries}/5")
+        log.info(f"Trying to log into Intel: Attempt {tries}/5")
         browser.select_form(nr=0)
         try:
             browser.form['email'] = config.ingress_user
@@ -66,9 +66,8 @@ def mechanize_cookie(config, log):
         final_cookie = _write_cookie(log, {c.name: c.value for c in cookie_list})
         return final_cookie
     else:
-        log.error("Failed to login into Intel")
         log.info(browser.geturl())
-        return ""
+        raise Exception("Failed to log into Intel")
 
 
 def selenium_cookie(config, log):

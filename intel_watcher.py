@@ -172,12 +172,12 @@ if __name__ == "__main__":
             while not cookie_get_success:
                 try:
                     if config.cookie_getting_module == "mechanize":
-                            config.cookie = mechanize_cookie(config, log)
-                            cookie_get_success = True
+                        config.cookie = mechanize_cookie(config, log)
+                        cookie_get_success = True
 
                     elif config.cookie_getting_module == "selenium":
-                            config.cookie = selenium_cookie(config, log)
-                            cookie_get_success = True
+                        config.cookie = selenium_cookie(config, log)
+                        cookie_get_success = True
                 except Exception as e:
                     log.error("Error while trying to get a Cookie - sending a webhook, sleeping 1 hour and trying again")
                     log.exception(e)
