@@ -148,33 +148,36 @@ class IntelMap:
                                  proxies=self.proxy)
 
             if not result or result.text == "{}" or not result.text:
-                errors = tiles
-            else:
-                result = result.json()["result"]["map"]
-                errors = []
-                for tile_name, payload in result.items():
-                    tile = tile_map[tile_name]
+                self.scrape_tiles(tiles, portals, log)
+                return
 
-                    if "error" in payload.keys():
+            result = result.json()["result"]["map"]
+            errors = []
+            for tile in tiles:
+                if not tile.name in result.keys():
+                    errors.append(tile)
+            for tile_name, payload in result.items():
+                tile = tile_map[tile_name]
+
+                if "error" in payload.keys():
+                    errors.append(tile)
+                else:
+                    entities = payload["gameEntities"]
+                    if not entities:
                         errors.append(tile)
                     else:
-                        entities = payload["gameEntities"]
-                        if not entities:
-                            errors.append(tile)
-                        else:
-                            for entry in entities:
-                                if entry[2][0] == "p":
-                                    p_id = entry[0]
-                                    p_lat = entry[2][2] / 1e6
-                                    p_lon = entry[2][3] / 1e6
-                                    p_name = maybe_byte(entry[2][8])
-                                    p_img = maybe_byte(entry[2][7])
-                                    portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+                        for entry in entities:
+                            if entry[2][0] == "p":
+                                p_id = entry[0]
+                                p_lat = entry[2][2] / 1e6
+                                p_lon = entry[2][3] / 1e6
+                                p_name = maybe_byte(entry[2][8])
+                                p_img = maybe_byte(entry[2][7])
+                                portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+            self.scrape_tiles(errors, portals, log)
         except Exception as e:
             log.exception(e)
-            errors = tiles
-
-        self.scrape_tiles(errors, portals)
+            self.scrape_tiles(tiles, portals, log)
 
     def get_portal_details(self, guid):
         _ = {
