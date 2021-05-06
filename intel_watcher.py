@@ -4,8 +4,8 @@ import requests
 import time
 import logging
 import coloredlogs
-import tracemalloc
 
+from time import sleep
 from concurrent.futures.thread import ThreadPoolExecutor
 from rich.progress import Progress
 
@@ -37,42 +37,52 @@ def update_wp(wp_type, points):
     log.info("")
 
 
-def scrape_all(time, n):
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+
+def scrape_all(n):
     bbox = list(config.bbox.split(';'))
     tiles = []
     for cord in bbox:
         bbox_cord = list(map(float, cord.split(',')))
         tiles += get_tiles(bbox_cord)
 
-    tiles_to_scrape = [tiles[i * n:(i + 1) * n] for i in range((len(tiles) + n - 1) // n)]
+    log.info(f"Total tiles: {len(tiles)}")
+
     portals = []
+    for part_tiles in chunks(tiles, config.maxtiles):
+        scrapetime = Stopwatch()
 
-    tracemalloc.start()
-    with Progress() as progress:
-        with ThreadPoolExecutor(max_workers=config.workers) as executor:
-            task = progress.add_task("Scraping Portals", total=len(tiles))
-            for part_tiles in tiles_to_scrape:
-                executor.submit(scraper.scrape_tiles, part_tiles, portals, log, progress, task)
-    log.info(f"Done scraping {len(tiles)} tiles in {time.pause()}s - Writing portals to DB")
+        with Progress() as progress:
+            task = progress.add_task("Scraping Portals", total=len(part_tiles))
+            with ThreadPoolExecutor(max_workers=config.workers) as executor:
+                for part_tile in chunks(part_tiles, n):
+                    executor.submit(scraper.scrape_tiles, part_tile, portals, log, progress, task)
 
-    current, peak = tracemalloc.get_traced_memory()
-    log.info(f"Current memory usage is {round(current / 10 ** 6, 2)}MB; Peak was {round(peak / 10 ** 6, 2)}MB")
-    tracemalloc.stop()
+        log.info(f"Done in {scrapetime.pause()}s - Writing portals to DB")
 
-    failed_tiles = len([t for t in tiles if t.failed])
-    if failed_tiles > 0:
-        log.warning(f"There were {failed_tiles} tiles that failed")
+        failed_tiles = len([t for t in tiles if t.failed])
+        if failed_tiles > 0:
+            log.warning(f"There were {failed_tiles} tiles that failed")
 
-    queries = Queries(config)
-    try:
-        queries.update_portal(portals)
-    except Exception as e:
-        log.error(f"Failed executing Portal Inserts")
-        log.exception(e)
+        queries = Queries(config)
+        try:
+            queries.update_portal(portals)
+        except Exception as e:
+            log.error(f"Failed executing Portal Inserts")
+            log.exception(e)
 
-    log.info(f"Updated {len(portals)} Portals")
+        log.info(f"Updated {len(portals)} Portals")
 
-    queries.close()
+        queries.close()
+
+        if len(tiles) > config.maxtiles:
+            portals = []
+            log.info(f"Sleeping {config.areasleep} minutes before getting the next {config.maxtiles} tiles.")
+            sleep(60*config.areasleep)
 
 
 def send_cookie_webhook(text):
@@ -172,8 +182,6 @@ if __name__ == "__main__":
         log.error("Please use a -t count below 25")
         sys.exit(1)
 
-    #start = timeit.default_timer()
     time = Stopwatch()
-    scrape_all(time, int(args.tiles))
-    #stop = timeit.default_timer()
+    scrape_all(int(args.tiles))
     log.success(f"Total runtime: {time.pause()} seconds")

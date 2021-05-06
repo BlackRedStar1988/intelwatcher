@@ -1,6 +1,7 @@
 [Config]
 bbox = 0.00,0.00,0.00,0.00;1.00,1.00,1.00,1.00;2.00,2.00,2.00,2.00
-sleep_between_areas = 0
+sleep_between_areas = 5
+max_tiles = 1000
 workers = 3
 
 cookie_webhooks = False
