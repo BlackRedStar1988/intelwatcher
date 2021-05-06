@@ -64,7 +64,7 @@ def scrape_all(n):
 
         log.info(f"Done in {scrapetime.pause()}s - Writing portals to DB")
 
-        failed_tiles = len([t for t in tiles if t.failed])
+        failed_tiles = len([t for t in part_tiles if t.failed])
         if failed_tiles > 0:
             log.warning(f"There were {failed_tiles} tiles that failed")
 
