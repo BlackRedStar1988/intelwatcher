@@ -85,7 +85,7 @@ def scrape_all(n):
 
             with Progress() as progress:
                 total_sleep = 60 * config.areasleep
-                task = progress.add_task("Waiting", total=total_sleep)
+                task = progress.add_task("Sleeping", total=total_sleep)
                 for i in range(total_sleep):
                     progress.update(task, advance=1)
                     sleep(1)
