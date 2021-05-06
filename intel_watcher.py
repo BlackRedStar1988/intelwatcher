@@ -49,7 +49,7 @@ def scrape_all(time, n):
     tracemalloc.start()
     with ThreadPoolExecutor(max_workers=config.workers) as executor:
         for part_tiles in tiles_to_scrape:
-            executor.submit(scraper.scrape_tiles, part_tiles, portals)
+            executor.submit(scraper.scrape_tiles, part_tiles, portals, log)
     log.info(f"Done scraping {len(tiles)} tiles in {time.pause()}s - Writing portals to DB")
 
     current, peak = tracemalloc.get_traced_memory()

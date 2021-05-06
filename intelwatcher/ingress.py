@@ -128,47 +128,52 @@ class IntelMap:
         _ = self.r.post('https://intel.ingress.com/r/getEntities', data=data, headers=self.headers, proxies=self.proxy)
         return json.loads(_.text)
 
-    def scrape_tiles(self, tiles, portals):
+    def scrape_tiles(self, tiles, portals, log):
         if not tiles:
             return
 
-        tile_map = {t.name: t for t in tiles}
-        data = self.data_base.copy()
+        try:
+            tile_map = {t.name: t for t in tiles}
+            data = self.data_base.copy()
 
-        to_scrape = []
-        for tile in tiles:
-            if not tile.failed:
-                to_scrape.append(tile.name)
-                tile.tries += 1
-        data["tileKeys"] = to_scrape
+            to_scrape = []
+            for tile in tiles:
+                if not tile.failed:
+                    to_scrape.append(tile.name)
+                    tile.tries += 1
+            data["tileKeys"] = to_scrape
 
-        now = int(time())
-        result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
-                             proxies=self.proxy)
-        result = result.json()["result"]["map"]
+            now = int(time())
+            result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
+                                 proxies=self.proxy)
 
-        if not result:
-            errors = tiles
-        else:
-            errors = []
-            for tile_name, payload in result.items():
-                tile = tile_map[tile_name]
+            if not result or result.text == "{}" or not result.text:
+                errors = tiles
+            else:
+                result = result.json()["result"]["map"]
+                errors = []
+                for tile_name, payload in result.items():
+                    tile = tile_map[tile_name]
 
-                if "error" in payload.keys():
-                    errors.append(tile)
-                else:
-                    entities = payload["gameEntities"]
-                    if not entities:
+                    if "error" in payload.keys():
                         errors.append(tile)
                     else:
-                        for entry in entities:
-                            if entry[2][0] == "p":
-                                p_id = entry[0]
-                                p_lat = entry[2][2] / 1e6
-                                p_lon = entry[2][3] / 1e6
-                                p_name = maybe_byte(entry[2][8])
-                                p_img = maybe_byte(entry[2][7])
-                                portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+                        entities = payload["gameEntities"]
+                        if not entities:
+                            errors.append(tile)
+                        else:
+                            for entry in entities:
+                                if entry[2][0] == "p":
+                                    p_id = entry[0]
+                                    p_lat = entry[2][2] / 1e6
+                                    p_lon = entry[2][3] / 1e6
+                                    p_name = maybe_byte(entry[2][8])
+                                    p_img = maybe_byte(entry[2][7])
+                                    portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+        except Exception as e:
+            log.exception(e)
+            errors = tiles
+
         self.scrape_tiles(errors, portals)
 
     def get_portal_details(self, guid):
