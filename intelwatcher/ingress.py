@@ -3,7 +3,7 @@
 import requests
 import re
 import json
-from time import time
+import time
 from requests.utils import dict_from_cookiejar, cookiejar_from_dict
 import math
 __AUTHOR__ = 'lc4t0.0@gmail.com and ccev'
@@ -128,12 +128,11 @@ class IntelMap:
         _ = self.r.post('https://intel.ingress.com/r/getEntities', data=data, headers=self.headers, proxies=self.proxy)
         return json.loads(_.text)
 
-    def scrape_tiles(self, tiles, portals, log):
+    def scrape_tiles(self, tiles, portals, log, progress, task):
         if not tiles:
             return
 
         try:
-            tile_map = {t.name: t for t in tiles}
             data = self.data_base.copy()
 
             to_scrape = []
@@ -141,43 +140,51 @@ class IntelMap:
                 if not tile.failed:
                     to_scrape.append(tile.name)
                     tile.tries += 1
+
+            if not to_scrape:
+                return
             data["tileKeys"] = to_scrape
 
-            now = int(time())
+            now = int(time.time())
             result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
                                  proxies=self.proxy)
 
             if not result or result.text == "{}" or not result.text:
-                self.scrape_tiles(tiles, portals, log)
+                self.scrape_tiles(tiles, portals, log, progress, task)
                 return
 
             result = result.json()["result"]["map"]
             errors = []
             for tile in tiles:
-                if not tile.name in result.keys():
+                payload = result.get(tile.name)
+
+                if not payload:
                     errors.append(tile)
-            for tile_name, payload in result.items():
-                tile = tile_map[tile_name]
+                    continue
 
                 if "error" in payload.keys():
                     errors.append(tile)
-                else:
-                    entities = payload["gameEntities"]
-                    if not entities:
-                        errors.append(tile)
-                    else:
-                        for entry in entities:
-                            if entry[2][0] == "p":
-                                p_id = entry[0]
-                                p_lat = entry[2][2] / 1e6
-                                p_lon = entry[2][3] / 1e6
-                                p_name = maybe_byte(entry[2][8])
-                                p_img = maybe_byte(entry[2][7])
-                                portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
-            self.scrape_tiles(errors, portals, log)
+                    continue
+
+                entities = payload.get("gameEntities")
+                if not entities:
+                    errors.append(tile)
+                    continue
+
+                progress.update(task, advance=1)
+                for entry in entities:
+                    if entry[2][0] == "p":
+                        p_id = entry[0]
+                        p_lat = entry[2][2] / 1e6
+                        p_lon = entry[2][3] / 1e6
+                        p_name = maybe_byte(entry[2][8])
+                        p_img = maybe_byte(entry[2][7])
+                        portals.append((p_id, p_name, p_img, p_lat, p_lon, now, now))
+
+            self.scrape_tiles(errors, portals, log, progress, task)
         except Exception as e:
             log.exception(e)
-            self.scrape_tiles(tiles, portals, log)
+            self.scrape_tiles(tiles, portals, log, progress, task)
 
     def get_portal_details(self, guid):
         _ = {
@@ -196,7 +203,7 @@ class IntelMap:
     def get_plexts(self, min_lng, max_lng, min_lat, max_lat, tab='all', maxTimestampMs=-1, minTimestampMs=0,
                    ascendingTimestampOrder=True):
         if minTimestampMs == 0:
-            minTimestampMs = int(time()*1000)
+            minTimestampMs = int(time.time()*1000)
         data = self.data_base
         data.update({
             'ascendingTimestampOrder': ascendingTimestampOrder,

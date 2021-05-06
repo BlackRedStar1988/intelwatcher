@@ -7,6 +7,7 @@ import coloredlogs
 import tracemalloc
 
 from concurrent.futures.thread import ThreadPoolExecutor
+from rich.progress import Progress
 
 from intelwatcher.ingress import IntelMap, get_tiles, maybe_byte
 from intelwatcher.config import Config
@@ -47,9 +48,11 @@ def scrape_all(time, n):
     portals = []
 
     tracemalloc.start()
-    with ThreadPoolExecutor(max_workers=config.workers) as executor:
-        for part_tiles in tiles_to_scrape:
-            executor.submit(scraper.scrape_tiles, part_tiles, portals, log)
+    with Progress() as progress:
+        with ThreadPoolExecutor(max_workers=config.workers) as executor:
+            task = progress.add_task("Scraping Portals", total=len(tiles))
+            for part_tiles in tiles_to_scrape:
+                executor.submit(scraper.scrape_tiles, part_tiles, portals, log, progress, task)
     log.info(f"Done scraping {len(tiles)} tiles in {time.pause()}s - Writing portals to DB")
 
     current, peak = tracemalloc.get_traced_memory()
