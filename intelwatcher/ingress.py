@@ -146,8 +146,18 @@ class IntelMap:
             data["tileKeys"] = to_scrape
 
             now = int(time.time())
-            result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
-                                 proxies=self.proxy)
+
+            attempts = 0
+            try:
+                while attempts < 4:
+                    result = self.r.post("https://intel.ingress.com/r/getEntities", json=data, headers=self.headers,
+                                         proxies=self.proxy)
+                    attempts = 10
+            except Exception as e:
+                attempts += 1
+                if attempts == 4:
+                    log.exception(e)
+                    return
 
             if not result or result.text == "{}" or not result.text:
                 self.scrape_tiles(tiles, portals, log, progress, task)
