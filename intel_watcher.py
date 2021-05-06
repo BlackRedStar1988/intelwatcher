@@ -82,7 +82,13 @@ def scrape_all(n):
         if len(tiles) > config.maxtiles:
             portals = []
             log.info(f"Sleeping {config.areasleep} minutes before getting the next {config.maxtiles} tiles.")
-            sleep(60*config.areasleep)
+
+            with Progress() as progress:
+                total_sleep = 60 * config.areasleep
+                task = progress.add_task("Waiting", total=total_sleep)
+                for i in range(total_sleep):
+                    progress.update(task, advance=1)
+                    sleep(1)
 
 
 def send_cookie_webhook(text):
