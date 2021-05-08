@@ -86,6 +86,7 @@ def scrape_all(n):
         log.info(f"Updated {len(portals)} Portals")
 
         queries.close()
+        portals = []
 
         if len(tiles) > config.maxtiles:
             portals = []
