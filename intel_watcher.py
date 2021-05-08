@@ -81,6 +81,8 @@ def scrape_all(n):
 
         if len(tiles) > config.maxtiles:
             portals = []
+            success = len([t for t in tiles if t.failed])
+            log.info(f"Total tiles scraped: {success}/{len(tiles)}")
             log.info(f"Sleeping {config.areasleep} minutes before getting the next {config.maxtiles} tiles.")
 
             with Progress() as progress:
