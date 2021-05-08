@@ -71,7 +71,6 @@ def get_tiles(bbox):
 
 
 class IntelMap:
-    r = requests.Session()
     headers = {
         'accept': '*/*',
         'accept-encoding': 'gzip, deflate, br',
@@ -96,14 +95,14 @@ class IntelMap:
 
     def login(self, cookie):
         try:
-            self.cookie_dict = {k.strip():v for k,v in re.findall(r'(.*?)=(.*?);', cookie)}
+            self.cookie_dict = {k.strip(): v for k, v in re.findall(r"(.*?)=(.*?);", cookie)}
             s = requests.Session()
             s.cookies = cookiejar_from_dict(self.cookie_dict)
-            test = s.get('https://intel.ingress.com/intel', proxies=self.proxy)
-            self.data_base['v'] = re.findall('/jsc/gen_dashboard_([\d\w]+).js"', test.text)[0]
+            test = s.get("https://intel.ingress.com/intel", proxies=self.proxy)
+            self.data_base["v"] = re.findall(r'/jsc/gen_dashboard_([\d\w]+).js"', test.text)[0]
             self.r = s
             self.cookie_dict = dict_from_cookiejar(self.r.cookies)
-            self.headers.update({'x-csrftoken': self.cookie_dict['csrftoken']})
+            self.headers.update({"x-csrftoken": self.cookie_dict["csrftoken"]})
             self.isCookieOk = True
         except IndexError:
             self.isCookieOk = False
@@ -182,7 +181,7 @@ class IntelMap:
     def get_portal_details(self, guid):
         data = self.data_base.copy()
         data["guid"] = guid
-        result = self.r.post('https://intel.ingress.com/r/getPortalDetails', json=data, headers=self.headers,
+        result = self.r.post("https://intel.ingress.com/r/getPortalDetails", json=data, headers=self.headers,
                         proxies=self.proxy)
         try:
             return result.json()
