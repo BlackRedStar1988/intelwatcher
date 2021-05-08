@@ -63,7 +63,7 @@ class Queries():
     def update_portal(self, data):
         query = (
             "INSERT INTO ingress_portals (external_id, name, url, lat, lon, updated, imported) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s) AS p"
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) AS p "
             "ON DUPLICATE KEY UPDATE updated=p.updated, name=p.name, url=p.url, "
             "lat=p.lat, lon=p.lon"
         )
