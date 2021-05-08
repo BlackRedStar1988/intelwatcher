@@ -47,6 +47,8 @@ class Tile:
     def __init__(self, x, y):
         self.name = f"15_{x}_{y}_0_8_100"
         self.tries = 0
+        self.success = False
+        self.fails = 0
 
     @property
     def failed(self):
@@ -113,7 +115,6 @@ class IntelMap:
     def scrape_tiles(self, tiles, portals, log, progress, task):
         if not tiles:
             return
-
         try:
             data = self.data_base.copy()
 
@@ -163,6 +164,7 @@ class IntelMap:
                     errors.append(tile)
                     continue
 
+                tile.success = True
                 progress.update(task, advance=1)
                 for entry in entities:
                     if entry[2][0] == "p":

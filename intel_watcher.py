@@ -43,6 +43,10 @@ def chunks(lst, n):
         yield lst[i:i + n]
 
 
+def needed_tiles(tiles):
+    return [t for t in tiles if not t.success and t.fails < 3]
+
+
 def scrape_all(n):
     bbox = list(config.bbox.split(';'))
     tiles = []
@@ -53,7 +57,8 @@ def scrape_all(n):
     log.info(f"Total tiles: {len(tiles)}")
 
     portals = []
-    for part_tiles in chunks(tiles, config.maxtiles):
+    while len(needed_tiles(tiles)) > 0:
+        part_tiles = needed_tiles(tiles)[:config.maxtiles]
         scrapetime = Stopwatch()
 
         with Progress() as progress:
@@ -64,9 +69,12 @@ def scrape_all(n):
 
         log.info(f"Done in {scrapetime.pause()}s - Writing portals to DB")
 
-        failed_tiles = len([t for t in part_tiles if t.failed])
-        if failed_tiles > 0:
-            log.warning(f"There were {failed_tiles} tiles that failed")
+        failed_tiles = [t for t in part_tiles if t.failed]
+        if len(failed_tiles) > 0:
+            log.warning(f"There were len({failed_tiles}) tiles that failed")
+            for tile in failed_tiles:
+                tile.tries = 0
+                tile.fails += 1
 
         queries = Queries(config)
         try:
@@ -81,16 +89,19 @@ def scrape_all(n):
 
         if len(tiles) > config.maxtiles:
             portals = []
-            success = len([t for t in tiles if t.failed])
-            log.info(f"Total tiles scraped: {success}/{len(tiles)}")
-            log.info(f"Sleeping {config.areasleep} minutes before getting the next {config.maxtiles} tiles.")
+            success_tiles = len([t for t in tiles if t.success])
+            log.info(f"Total tiles scraped: {success_tiles}/{len(tiles)}")
 
-            with Progress() as progress:
-                total_sleep = 60 * config.areasleep
-                task = progress.add_task("Sleeping", total=total_sleep)
-                for i in range(total_sleep):
-                    progress.update(task, advance=1)
-                    sleep(1)
+            next_tiles = len(needed_tiles(tiles))
+            if next_tiles > 0:
+                log.info(f"Sleeping {config.areasleep} minutes before getting the next {next_tiles} tiles.")
+
+                with Progress() as progress:
+                    total_sleep = 60 * config.areasleep
+                    task = progress.add_task("Sleeping", total=total_sleep)
+                    for i in range(total_sleep):
+                        progress.update(task, advance=1)
+                        sleep(1)
 
 
 def send_cookie_webhook(text):
