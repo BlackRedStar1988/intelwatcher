@@ -111,23 +111,6 @@ class IntelMap:
     def getCookieStatus(self):
         return self.isCookieOk
 
-    def get_game_score(self):
-        data = self.data_base
-        data = json.dumps(data)
-        _ = self.r.post('https://intel.ingress.com/r/getGameScore', data=data, headers=self.headers, proxies=self.proxy)
-        print(_.text)
-        return json.loads(_.text)
-
-    def get_entities(self, tilenames):
-        _ = {
-          "tileKeys": tilenames,    # ['15_25238_13124_8_8_100']
-        }
-        data = self.data_base
-        data.update(_)
-        data = json.dumps(data)
-        _ = self.r.post('https://intel.ingress.com/r/getEntities', data=data, headers=self.headers, proxies=self.proxy)
-        return json.loads(_.text)
-
     def scrape_tiles(self, tiles, portals, log, progress, task):
         if not tiles:
             return
@@ -197,18 +180,33 @@ class IntelMap:
             self.scrape_tiles(tiles, portals, log, progress, task)
 
     def get_portal_details(self, guid):
+        data = self.data_base.copy()
+        data["guid"] = guid
+        result = self.r.post('https://intel.ingress.com/r/getPortalDetails', json=data, headers=self.headers,
+                        proxies=self.proxy)
+        try:
+            return result.json()
+        except Exception as e:
+            return None
+
+    # UNUSED
+
+    def get_game_score(self):
+        data = self.data_base
+        data = json.dumps(data)
+        _ = self.r.post('https://intel.ingress.com/r/getGameScore', data=data, headers=self.headers, proxies=self.proxy)
+        print(_.text)
+        return json.loads(_.text)
+
+    def get_entities(self, tilenames):
         _ = {
-          "guid": guid, # 3e2bcc15c58d486fae24e2ade2bf7327.16
+          "tileKeys": tilenames,    # ['15_25238_13124_8_8_100']
         }
         data = self.data_base
         data.update(_)
         data = json.dumps(data)
-        _ = self.r.post('https://intel.ingress.com/r/getPortalDetails', data=data, headers=self.headers,
-                        proxies=self.proxy)
-        try:
-            return json.loads(_.text)
-        except Exception as e:
-            return None
+        _ = self.r.post('https://intel.ingress.com/r/getEntities', data=data, headers=self.headers, proxies=self.proxy)
+        return json.loads(_.text)
 
     def get_plexts(self, min_lng, max_lng, min_lat, max_lat, tab='all', maxTimestampMs=-1, minTimestampMs=0,
                    ascendingTimestampOrder=True):
