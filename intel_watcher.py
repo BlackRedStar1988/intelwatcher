@@ -71,7 +71,7 @@ def scrape_all(n):
 
         failed_tiles = [t for t in part_tiles if t.failed]
         if len(failed_tiles) > 0:
-            log.warning(f"There were len({failed_tiles}) tiles that failed")
+            log.warning(f"There were {len(failed_tiles)} tiles that failed")
             for tile in failed_tiles:
                 tile.tries = 0
                 tile.fails += 1
