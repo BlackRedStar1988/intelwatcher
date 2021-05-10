@@ -92,10 +92,10 @@ def scrape_all(n):
             success_tiles = len([t for t in tiles if t.success])
             log.info(f"Total tiles scraped: {success_tiles}/{len(tiles)}")
 
-            next_tiles = len(needed_tiles(tiles))
-            if next_tiles > 0:
+            next_tiles = needed_tiles(tiles)
+            if len(next_tiles) > 0:
                 log.info((f"Sleeping {config.areasleep} minutes before getting the next "
-                          f"{next_tiles[:config.maxtiles]} tiles"))
+                          f"{len(next_tiles[:config.maxtiles])} tiles"))
 
                 with Progress() as progress:
                     total_sleep = 60 * config.areasleep
