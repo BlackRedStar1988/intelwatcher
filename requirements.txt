@@ -1,6 +1,7 @@
 requests
 lxml
 pymysql
+rich
 
 selenium
 webdriver_manager
